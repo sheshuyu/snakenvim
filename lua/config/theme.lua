@@ -60,8 +60,11 @@ end
 if type(M.state.icons) ~= 'boolean' then
   M.state.icons = true -- 默认开启,与电脑端一致
 end
+-- 兼容旧键名。这个开关原来叫 mosh_opts,改名后如果只读新键,那么已经存在的
+-- 机器上那个值会被当成「从没设置过」而重置成默认关 —— 用户的选择在改名时
+-- 被静默丢掉。多读一次旧键,迁移过来再继续。
 if type(M.state.remote_opts) ~= 'boolean' then
-  M.state.remote_opts = false -- 默认关闭,觉得卡再开
+  M.state.remote_opts = type(M.state.mosh_opts) == 'boolean' and M.state.mosh_opts or false
 end
 
 --- 当前是否使用图标(供 lualine 等插件读取)
