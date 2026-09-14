@@ -168,9 +168,10 @@ local function gradient_hl(n_rows, colors)
   local hl = {}
   for i = 1, n_rows do
     local t = (i - 1) / math.max(1, n_rows - 1)
-    -- 从 10% 混向背景,到 65% 混向背景 —— 顶部最亮,底部沉下去
+    -- 从 6% 混向背景,到 48% 混向背景 —— 顶部最亮,底部沉下去。
+    -- 别混得太狠:超过 50% 时最下面一两行会糊进背景里,字母形状都看不清
     local name = ('SnakeDashboardHeader%d'):format(i)
-    vim.api.nvim_set_hl(0, name, { fg = blend(colors.bright, colors.bg, 0.10 + 0.55 * t) })
+    vim.api.nvim_set_hl(0, name, { fg = blend(colors.bright, colors.bg, 0.06 + 0.42 * t) })
     hl[i] = { { name, 0, -1 } }
   end
   return hl
@@ -210,6 +211,10 @@ local function menu_row(label, shortcut, total_w)
     seg(line, 'SnakeDashboardShortcut', dot_start + dots + 1, -1),
   }
 end
+
+-- 最近一次算出来的菜单几何位置。选中条要按这个范围画,不能用整行高亮 ——
+-- 菜单只有几十列,整行铺满会从屏幕最左拉到最右,和菜单完全脱节。
+local MENU_GEOM = { left = 0, width = 0 }
 
 -- 每项是 { 标签, 快捷键, 动作 }。标签不要带前缀符号,menu_row 会加。
 local ENTRIES = {
@@ -299,6 +304,11 @@ local function build_layout()
   local colors = theme_colors()
   local mw = menu_width(win_w, width(header[1]))
   local spacing = 1
+
+  -- 记下菜单的位置和宽度,选中条要照着画。
+  -- left 的算法和 alpha 的 align_center 一致:(窗口宽 - 内容宽) / 2 向下取整
+  MENU_GEOM.width = mw
+  MENU_GEOM.left = math.floor((win_w - mw) / 2)
 
   local rows = vim.tbl_map(function(e)
     local line, hl = menu_row(e[1], e[2], mw)
@@ -418,41 +428,63 @@ return {
       vim.api.nvim_create_autocmd('VimResized', { group = aug, callback = relayout })
       vim.api.nvim_create_autocmd('ColorScheme', { group = aug, callback = relayout })
 
-      -- alpha 把行号、符号列、cursorline 都关掉了,但 laststatus 是
-      -- **全局**选项它管不了。我们在 options.lua 设了全局状态栏
-      -- (laststatus=3),不处理的话启动界面底部会挂一条显示 "alpha"
-      -- 空缓冲区的状态栏,很难看。
-      --
-      -- 同时在这里打开 cursorline 做「整行选中条」。alpha 是在设置
-      -- filetype 之后才关 cursorline 的,所以必须 vim.schedule 推到它
-      -- 设置完再改,否则会被它覆盖掉。
+      -- ── 选中条 ──────────────────────────────────────────────────────
+      -- 不用 cursorline:cursorline 会铺满整个屏幕宽度,而菜单只有几十列,
+      -- 那条横杠会和菜单完全脱节(渲染出来看过,很怪)。
+      -- 改用 extmark 只在菜单的列范围内铺底色,选中效果刚好框住菜单那一块。
+      local sel_ns = vim.api.nvim_create_namespace('snake_dashboard_sel')
+
+      local function paint_selection()
+        local buf = vim.api.nvim_get_current_buf()
+        if vim.bo[buf].filetype ~= 'alpha' then
+          return
+        end
+        vim.api.nvim_buf_clear_namespace(buf, sel_ns, 0, -1)
+
+        local line_count = vim.api.nvim_buf_line_count(buf)
+        local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+        if row < 0 or row >= line_count then
+          return
+        end
+        -- 空白行不画(比如菜单上下的留白)
+        local text = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ''
+        if text:match('^%s*$') then
+          return
+        end
+
+        local left = MENU_GEOM.left
+        local right = left + MENU_GEOM.width
+        -- extmark 的列是**字节**偏移,菜单行里有 ▸ ┈ 和中文,得换算
+        vim.api.nvim_buf_set_extmark(buf, sel_ns, row, #vim.fn.strcharpart(text, 0, left), {
+          end_col = #vim.fn.strcharpart(text, 0, right),
+          hl_group = 'SnakeDashboardSelected',
+          hl_eol = false,
+        })
+      end
+
       vim.api.nvim_create_autocmd('FileType', {
         group = aug,
         pattern = 'alpha',
         callback = function()
+          -- laststatus 是**全局**选项,alpha 管不了。我们在 options.lua 设了
+          -- 全局状态栏(laststatus=3),不处理的话启动界面底部会挂一条显示
+          -- "alpha" 空缓冲区的状态栏,很难看。
           vim.o.laststatus = 0
-          vim.schedule(function()
-            -- winhighlight 只在当前窗口生效,不会污染别的缓冲区
-            vim.wo.winhighlight = 'CursorLine:SnakeDashboardSelected'
-            vim.wo.cursorline = true
-          end)
+          vim.schedule(paint_selection)
         end,
+      })
+
+      vim.api.nvim_create_autocmd({ 'CursorMoved', 'WinEnter' }, {
+        group = aug,
+        callback = paint_selection,
       })
 
       vim.api.nvim_create_autocmd('BufEnter', {
         group = aug,
         callback = function()
-          if vim.bo.filetype == 'alpha' then
-            return
+          if vim.bo.filetype ~= 'alpha' then
+            vim.o.laststatus = 3
           end
-          vim.o.laststatus = 3
-          -- winhighlight 是**窗口局部**的,而 alpha 用的就是后面显示文件的
-          -- 那个窗口。不还原的话 'CursorLine:SnakeDashboardSelected' 会一直
-          -- 跟着走,让普通缓冲区里的高亮都变样。
-          if vim.wo.winhighlight == 'CursorLine:SnakeDashboardSelected' then
-            vim.wo.winhighlight = ''
-          end
-          vim.wo.cursorline = true
         end,
       })
 
