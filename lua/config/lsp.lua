@@ -68,6 +68,29 @@ vim.api.nvim_create_autocmd('LspAttach', {
     map({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, 'LSP:代码操作')
     map('n', '<leader>cl', '<cmd>checkhealth vim.lsp<CR>', 'LSP:查看客户端状态')
 
+    -- ── 代码跳转 ────────────────────────────────────────────────────────
+    -- gd / gr 是「直接跳过去」,这几个是「先列出候选再挑」,
+    -- 同名符号多的时候后者好用得多
+    map('n', '<leader>lD', function()
+      require('telescope.builtin').lsp_definitions()
+    end, 'LSP:定义列表(可挑选)')
+    map('n', '<leader>lR', function()
+      require('telescope.builtin').lsp_references()
+    end, 'LSP:引用列表')
+    map('n', '<leader>lI', function()
+      require('telescope.builtin').lsp_implementations()
+    end, 'LSP:实现列表')
+    map('n', '<leader>lT', function()
+      require('telescope.builtin').lsp_type_definitions()
+    end, 'LSP:类型定义列表')
+    -- 在竖直分屏里打开定义:想看被调用方又不想丢掉当前位置时用
+    map('n', '<leader>lv', function()
+      vim.cmd('vsplit')
+      vim.lsp.buf.definition()
+    end, 'LSP:分屏打开定义')
+    -- 跳回上一个位置用 <C-o>,前进用 <C-i> —— 这两个是 vim 自带的跳转栈,
+    -- 不需要额外映射(<C-i> 在终端里和 <Tab> 是同一个键码,抢它有风险)
+
     -- 高亮当前符号的所有引用,光标停一会自动出现
     if client:supports_method('textDocument/documentHighlight', bufnr) then
       local group = vim.api.nvim_create_augroup('snake_lsp_highlight_' .. bufnr, { clear = true })

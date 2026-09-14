@@ -130,5 +130,9 @@ map('n', '<leader>xl', '<cmd>lopen<CR>', { desc = '打开位置列表' })
 map('n', '<leader>xq', '<cmd>copen<CR>', { desc = '打开快速修复列表' })
 
 -- ── 终端 ────────────────────────────────────────────────────────────────
-map('n', '<leader>tt', '<cmd>terminal<CR>', { desc = '打开终端' })
+-- 浮动终端,自己实现的(见 config/terminal.lua),不装插件。
+-- 收起时只隐藏窗口、不杀进程,下次打开还是同一个会话。
+map('n', '<leader>tt', function()
+  require('config.terminal').toggle()
+end, { desc = '浮动终端:开关' })
 map('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = '终端:回到普通模式' })

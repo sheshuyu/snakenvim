@@ -139,8 +139,10 @@ return {
     'stevearc/oil.nvim',
     cmd = 'Oil',
     keys = {
-      { '-', '<CMD>Oil<CR>', desc = '打开所在目录' },
-      { '<leader>e', '<CMD>Oil<CR>', desc = '打开文件浏览器' },
+      -- 只留一个入口:侧边文件树是 <Space>e,oil 是「把目录当缓冲区编辑」,
+      -- 两者定位不同,不要都绑到 <Space>e 上(之前就是这么绑的,
+      -- 结果按第二次只是重新打开,退不回去)
+      { '-', '<CMD>Oil<CR>', desc = '用 oil 打开所在目录' },
     },
     opts = {
       columns = { 'icon' },
@@ -148,6 +150,10 @@ return {
       float = { border = 'rounded' },
       delete_to_trash = false, -- 直接删除。想用回收站改成 true
       skip_confirm_for_simple_edits = true,
+      keymaps = {
+        -- oil 默认没有「关闭」键位(只有 <C-c>),加一个 q 更符合直觉
+        ['q'] = { 'actions.close', mode = 'n' },
+      },
     },
   },
 }

@@ -193,8 +193,11 @@ end
 --- 拼一行菜单:▸ 标签 ┈┈┈┈┈┈ 快捷键
 -- 引导线把每行拉满,菜单整体成为一个有分量的块,而不是几根飘在巨大
 -- header 下面的小字。返回行内容和它的高亮分段。
-local function menu_row(label, shortcut, total_w)
-  local left = '▸  ' .. label
+--
+-- 标签要补齐到统一宽度:不然「退出」这种两字标签的引导线会从很左边就开始,
+-- 和别的行对不齐,看着像错位。
+local function menu_row(label, shortcut, total_w, label_w)
+  local left = '▸  ' .. label .. string.rep(' ', math.max(0, label_w - width(label)))
   local lw = width(left)
   local sw = width(shortcut)
   local dots = total_w - lw - sw - 2
@@ -310,8 +313,14 @@ local function build_layout()
   MENU_GEOM.width = mw
   MENU_GEOM.left = math.floor((win_w - mw) / 2)
 
+  -- 所有标签补齐到同一宽度,引导线才会对齐成一条竖线
+  local label_w = 0
+  for _, e in ipairs(ENTRIES) do
+    label_w = math.max(label_w, width(e[1]))
+  end
+
   local rows = vim.tbl_map(function(e)
-    local line, hl = menu_row(e[1], e[2], mw)
+    local line, hl = menu_row(e[1], e[2], mw, label_w)
     return {
       type = 'button',
       val = line,
@@ -343,10 +352,19 @@ local function build_layout()
   -- 而不是让它被 alpha 挤出屏幕(它的 v_center 只把偏移量夹到 0)
   local header_h = #header
   local buttons_h = #ENTRIES * (1 + spacing)
-  local want_footer = header_h + 3 + buttons_h + 2 + 2
+  local want_footer = header_h + 3 + buttons_h + 5
 
   if win_h >= want_footer then
-    content[#content + 1] = { type = 'padding', val = 2 }
+    -- 分隔线宽度跟菜单一致,把页脚和菜单绑成一个整体。
+    -- 不这么做的话页脚只是两行小字按窗口居中,和上面几十列的菜单没有任何
+    -- 视觉关联,看起来像飘在下面的一段孤立文字。
+    content[#content + 1] = { type = 'padding', val = 1 }
+    content[#content + 1] = {
+      type = 'text',
+      val = { string.rep('─', mw) },
+      opts = { position = 'center', hl = 'SnakeDashboardSeparator' },
+    }
+    content[#content + 1] = { type = 'padding', val = 1 }
     content[#content + 1] = {
       type = 'text',
       val = { "snake's neovim", '按 <Space> 查看所有键位' },
@@ -389,6 +407,7 @@ return {
       vim.api.nvim_set_hl(0, 'SnakeDashboardLeader', { link = 'Comment' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardShortcut', { link = 'Special' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardFooter', { link = 'Comment' })
+      vim.api.nvim_set_hl(0, 'SnakeDashboardSeparator', { link = 'WinSeparator' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardHeader', { link = 'Title' })
       -- 选中行:整行铺一层底色,像 telescope / fzf 的选中行
       vim.api.nvim_set_hl(0, 'SnakeDashboardSelected', { link = 'Visual' })
