@@ -4,19 +4,31 @@
 -- 正好对应「一段 ASCII header + 几个入口」的需求,不夹带文件浏览器之类的
 -- 重复功能(找文件我们已经有 telescope 了)。
 --
--- 两个容易踩的坑(都踩过了):
+-- 三个容易踩的坑(都踩过了):
 --   1. 没有 type = 'header' 这种东西 —— header 就是 type = 'text'
 --      ('header' 是 dashboard-nvim 的写法,混用会直接报
 --       "attempt to call a nil value")
---   2. 按钮的 opts.shortcut 会被 alpha 自动拼在 val 前面,
---      val 里不要再写一遍快捷键字母,否则会渲染成 "n n 新建文件"
+--   2. 按钮的 opts.shortcut 只负责显示,不会绑按键,必须另外给 opts.keymap
+--   3. 按钮的 val 里不要再写一遍快捷键字母,alpha 会自动把 shortcut 拼在前面
+--
+-- 布局是**每次按窗口大小现算的**,不是写死的:alpha 原生只会从上往下排,
+-- 不垂直居中,所以窗口一大内容就全挤在顶部、下面空一大片。这里自己算
+-- 顶部留白把内容摆到垂直中间,宽屏时还会把字形整数放大一档。
+
+-- ── 可调项 ──────────────────────────────────────────────────────────────
+
+-- 是否随窗口自适应(垂直居中 + 宽屏放大字形)。false 则固定 1 倍、顶部留 2 行
+local ADAPTIVE = true
+
+-- 强制字形倍率:1 = 51 列、2 = 102 列。nil = 按窗口宽度自动决定
+local FORCE_SCALE = nil
 
 -- ── ASCII 字体 ──────────────────────────────────────────────────────────
--- 用字形表而不是直接写多行字符串:每个字母只定义一次,五行天然对齐。
+-- 字形表只定义 1 倍大小,放大靠 scale_rows() 整数倍复制,所以改字体只需改这里。
 -- 想换字样(比如改成 SNAKE)只需改下面 render() 的入参。
 --
--- 字符用的是 █ 全角块。这条路子是给 iPad + mosh 场景选的:
--- █ 和空格在任何等宽字体里都有,不像 Nerd Font 私有码点会变豆腐块。
+-- 字符用 █ 全角块:任何等宽字体都有这个字形,iPad 上走 mosh 不会变豆腐块。
+-- 也正因为字形表里只有 █ 和空格(都是单宽字符),整数倍放大才是精确的。
 local FONT = {
   S = { '█████', '█    ', '█████', '    █', '█████' },
   N = { '█   █', '██  █', '█ █ █', '█  ██', '█   █' },
@@ -35,7 +47,7 @@ end
 
 --- 取一个字母的 5 行字形,并把每行补齐到该字母最宽的那一行。
 -- 字形表是手写的,某行多一个少一个空格很容易发生 —— 补一次宽度,
--- 整幅画就不会因此错位(第一版 E 的中间行多一个空格,就让第 3 行比别人宽 1 列)。
+-- 整幅画就不会因此错位(第一版 E 的中间行多一个空格,让第 3 行宽了 1 列)。
 local function glyph(ch)
   local g = FONT[ch]
   if not g then
@@ -70,10 +82,44 @@ local function render(word, spacing)
 end
 
 local HEADER = render('SNAKENVIM')
-local HEADER_WIDTH = width(HEADER[1])
-local HEADER_MAX = 60 -- 超过这个宽度在窄窗口里会被折行
+local BASE_WIDTH = width(HEADER[1])
 
--- ── 按钮 ────────────────────────────────────────────────────────────────
+--- 整数倍放大:每个字符横向重复 n 次,每行纵向重复 n 次。
+-- 遍历必须按「字符」而不是按字节,否则 █(UTF-8 三字节)会被切碎。
+local function scale_rows(rows, n)
+  if n <= 1 then
+    return rows
+  end
+  local out = {}
+  for _, row in ipairs(rows) do
+    local parts = {}
+    for i = 0, vim.fn.strchars(row) - 1 do
+      parts[#parts + 1] = vim.fn.strcharpart(row, i, 1):rep(n)
+    end
+    local wide = table.concat(parts)
+    for _ = 1, n do
+      out[#out + 1] = wide
+    end
+  end
+  return out
+end
+
+--- 按窗口宽度挑一档倍率
+local function pick_scale(win_w)
+  if FORCE_SCALE then
+    return FORCE_SCALE
+  end
+  if not ADAPTIVE then
+    return 1
+  end
+  -- 2 倍要 102 列,再留 8 列边距,不够就退回 1 倍
+  if win_w >= BASE_WIDTH * 2 + 8 then
+    return 2
+  end
+  return 1
+end
+
+-- ── 入口 ────────────────────────────────────────────────────────────────
 -- 每项是 { 标签, 快捷键, 动作 }。标签**不要**带快捷键字母。
 local ENTRIES = {
   {
@@ -120,55 +166,102 @@ local ENTRIES = {
   },
 }
 
--- 让所有按钮等宽,这样文字会左对齐成一列,而不是每行各自居中显得参差
+-- 让所有按钮等宽,文字就会左对齐成一列,而不是每行各自居中显得参差
 local BUTTON_WIDTH = 0
 for _, e in ipairs(ENTRIES) do
   BUTTON_WIDTH = math.max(BUTTON_WIDTH, width(e[1]) + #e[2])
 end
 BUTTON_WIDTH = BUTTON_WIDTH + 4
 
-local buttons = {
-  type = 'group',
-  val = vim.tbl_map(function(e)
-    return {
-      type = 'button',
-      val = e[1],
-      on_press = e[3],
-      opts = {
-        shortcut = e[2],
-        -- shortcut 只负责「显示」,不会真的绑按键 —— 必须另外给 keymap。
-        -- 不写这个的话,只有把光标移到按钮行上按回车才能触发,
-        -- 直接按 n / f / r 是没反应的。
-        -- alpha 会自动把这条 keymap 改成缓冲区局部,不会泄漏到别的缓冲区。
-        keymap = { 'n', e[2], e[3], { noremap = true, silent = true, nowait = true } },
-        position = 'center',
-        cursor = 1,
-        width = BUTTON_WIDTH,
-        hl = 'SnakeDashboardButton',
-        hl_shortcut = 'SnakeDashboardShortcut',
-      },
-    }
-  end, ENTRIES),
-  opts = { spacing = 1 },
-}
+--- 按当前窗口大小现算一份布局
+--
+-- 垂直居中交给 alpha 自己的 group + position = 'v_center' 来做:
+-- 它会拿真实窗口高度(state.win_height)算出偏移,比自己按 vim.o.lines
+-- 估算准,也省掉一堆高度累加的算术(那套我第一版算错了 —— alpha 的
+-- opts.spacing 是「每个元素后面都补空行」而不是「元素之间」,
+-- 所以按钮组高度是 n*(1+spacing) 不是 n+(n-1)*spacing)。
+local function build_layout()
+  local win_w = vim.o.columns
 
-local layout = {
-  { type = 'padding', val = 2 },
-  {
-    -- 注意是 text 不是 header
-    type = 'text',
-    val = HEADER,
-    opts = { position = 'center', hl = 'SnakeDashboardHeader' },
-  },
-  { type = 'padding', val = 2 },
-  buttons,
-  { type = 'padding', val = 1 },
-  {
-    type = 'text',
-    val = { "snake's neovim", '按 <Space> 查看所有键位' },
-    opts = { position = 'center', hl = 'SnakeDashboardFooter' },
-  },
-}
+  local scale = pick_scale(win_w)
+  local header = scale_rows(HEADER, scale)
+
+  -- 窗口窄到放不下字符画时,退回一行纯文字,避免被折行折断
+  if win_w < BASE_WIDTH * scale + 4 then
+    header = { "snake's neovim" }
+  end
+
+  -- 字形放大后按钮之间也要相应拉开,否则显得挤
+  local spacing = scale >= 2 and 2 or 1
+
+  local buttons = {
+    type = 'group',
+    val = vim.tbl_map(function(e)
+      return {
+        type = 'button',
+        val = e[1],
+        on_press = e[3],
+        opts = {
+          shortcut = e[2],
+          -- shortcut 只负责「显示」,不绑按键 —— 必须另外给 keymap。
+          -- 不写的话只有把光标移到按钮行上按回车才触发,直接按 n/f/r 没反应。
+          -- alpha 会把这条 keymap 改成缓冲区局部,不会泄漏到别的缓冲区。
+          keymap = { 'n', e[2], e[3], { noremap = true, silent = true, nowait = true } },
+          position = 'center',
+          cursor = 1,
+          width = BUTTON_WIDTH,
+          hl = 'SnakeDashboardButton',
+          hl_shortcut = 'SnakeDashboardShortcut',
+        },
+      }
+    end, ENTRIES),
+    opts = { spacing = spacing },
+  }
+
+  local content = {
+    {
+      -- 注意是 text 不是 header:alpha 没有 'header' 这个类型
+      type = 'text',
+      val = header,
+      opts = { position = 'center', hl = 'SnakeDashboardHeader' },
+    },
+    { type = 'padding', val = 2 },
+    buttons,
+    { type = 'padding', val = 1 },
+  }
+
+  -- 窗口太矮时把页脚去掉。alpha 的 v_center 只把偏移量夹到 0,
+  -- 内容真放不下时它照样会被挤出屏幕底部,页脚首当其冲。
+  -- 高度按 alpha 的实际排版规则算:按钮组是 n*(1+spacing)
+  -- (spacing 是每个按钮后面都补空行,不是只在按钮之间补)。
+  local win_h = math.max(1, vim.o.lines - vim.o.cmdheight)
+  local content_h = #header + 2 + #ENTRIES * (1 + spacing) + 1 + 2
+  if win_h >= content_h + 2 then
+    content[#content + 1] = {
+      type = 'text',
+      val = { "snake's neovim", '按 <Space> 查看所有键位' },
+      opts = { position = 'center', hl = 'SnakeDashboardFooter' },
+    }
+  end
+
+  -- ADAPTIVE 关闭时就用一段固定留白把内容顶到偏上位置(原来的行为)
+  if not ADAPTIVE then
+    table.insert(content, 1, { type = 'padding', val = 2 })
+    return { layout = content, opts = { margin = 5 } }
+  end
+
+  -- 整块内容包成一个 group,v_center 让它垂直居中
+  return {
+    layout = {
+      {
+        type = 'group',
+        val = content,
+        opts = { position = 'v_center' },
+      },
+    },
+    opts = { margin = 5 },
+  }
+end
 
 return {
   {
@@ -182,18 +275,6 @@ return {
     end,
     lazy = false,
     config = function()
-      if HEADER_WIDTH > HEADER_MAX then
-        vim.schedule(function()
-          vim.notify(
-            ("snake's neovim:启动界面 header 宽 %d 列,超过 %d,可能在窄窗口里被折行"):format(
-              HEADER_WIDTH,
-              HEADER_MAX
-            ),
-            vim.log.levels.WARN
-          )
-        end)
-      end
-
       -- 高亮一律用 link 跟随配色,换主题时会自动跟着变,不需要重新设置
       vim.api.nvim_set_hl(0, 'SnakeDashboardHeader', { link = 'Title' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardButton', { link = 'Normal' })
@@ -203,17 +284,39 @@ return {
       -- 隐藏 "type :help<Enter>..." 那行启动提示
       vim.opt.shortmess:append('I')
 
-      require('alpha').setup({
-        layout = layout,
-        opts = { margin = 5 },
+      local conf = build_layout()
+
+      local aug = vim.api.nvim_create_augroup('snake_dashboard', { clear = true })
+
+      -- 必须在 alpha.setup() 之前注册:autocmd 按注册顺序执行,
+      -- 这样我们的回调先跑(按最终窗口尺寸重算布局),alpha 自己的
+      -- VimEnter 回调随后才渲染,拿到的就是算好的布局。
+      vim.api.nvim_create_autocmd('VimEnter', {
+        group = aug,
+        callback = function()
+          conf.layout = build_layout().layout
+        end,
       })
 
-      -- alpha 自己已经把行号、相对行号、符号列、cursorline 都关掉了,
+      -- 窗口大小变了就重算并重绘。
+      -- 这里刻意不重新调用 alpha.setup():它内部会重建 VimEnter autocmd
+      -- 和三个用户命令,反复调用没必要。直接改 default_config 里那份
+      -- layout 再 redraw 就够了(redraw 读的就是这个表)。
+      vim.api.nvim_create_autocmd('VimResized', {
+        group = aug,
+        callback = function()
+          if vim.bo.filetype ~= 'alpha' then
+            return
+          end
+          conf.layout = build_layout().layout
+          pcall(require('alpha').redraw)
+        end,
+      })
+
+      -- alpha 已经把行号、相对行号、符号列、cursorline 都关掉了,
       -- 但 laststatus 是**全局**选项,它管不了。我们在 options.lua 里设了
       -- 全局状态栏(laststatus=3),不处理的话启动界面底部会挂一条
       -- 显示 "alpha" 空缓冲区的状态栏,很难看。
-      local aug = vim.api.nvim_create_augroup('snake_dashboard_chrome', { clear = true })
-
       vim.api.nvim_create_autocmd('FileType', {
         group = aug,
         pattern = 'alpha',
@@ -230,6 +333,8 @@ return {
           end
         end,
       })
+
+      require('alpha').setup(conf)
     end,
   },
 }
