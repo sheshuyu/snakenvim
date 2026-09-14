@@ -79,21 +79,3 @@ vim.api.nvim_create_autocmd('LspAttach', {
     end
   end,
 })
-
--- ── 把 profile 的能力开关落到实际选项上 ─────────────────────────────────
--- 远程(mosh/ssh)时改用 OSC52:让 y 的结果跟着 mosh 通道回到眼前的终端,
--- 而不是留在被连接的那台机器上。
-local osc52 = require('vim.ui.clipboard.osc52')
-if profile.clipboard == 'osc52' then
-  vim.g.clipboard = {
-    name = 'osc52',
-    copy = {
-      ['+'] = osc52.copy('+'),
-      ['*'] = osc52.copy('*'),
-    },
-    paste = {
-      ['+'] = osc52.paste('+'),
-      ['*'] = osc52.paste('*'),
-    },
-  }
-end

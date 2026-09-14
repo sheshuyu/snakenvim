@@ -53,7 +53,7 @@ opt.updatetime = 250
 opt.timeoutlen = 400
 opt.confirm = true -- 有未保存改动时退出会问,而不是直接失败
 opt.mouse = 'a'
-opt.clipboard = 'unnamedplus' -- 实际走哪个剪贴板由 profile 决定,见 autocmds.lua
+opt.clipboard = 'unnamedplus' -- 具体走哪条通道由下面按 profile 决定
 opt.scrolloff = 4
 opt.sidescrolloff = 8
 opt.pumheight = 12 -- 补全菜单最多 12 行,不遮挡代码
@@ -74,4 +74,24 @@ if profile.is_win and vim.fn.executable('pwsh') == 1 then
   opt.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
   opt.shellquote = ''
   opt.shellxquote = ''
+end
+
+-- ── 剪贴板实际通道 ──────────────────────────────────────────────────────
+-- 上面设的 clipboard = unnamedplus 只说明「用系统剪贴板」,具体走哪条通道
+-- 由 profile 决定。远程(mosh/ssh)时改用 OSC52:让 y 的结果跟着 mosh 通道
+-- 回到眼前的终端,而不是留在被连接的那台机器上 —— 不然在 iPad 上按 y
+-- 是复制到了 mac 的剪贴板,粘贴时什么也得不到。
+if profile.clipboard == 'osc52' then
+  local osc52 = require('vim.ui.clipboard.osc52')
+  vim.g.clipboard = {
+    name = 'osc52',
+    copy = {
+      ['+'] = osc52.copy('+'),
+      ['*'] = osc52.copy('*'),
+    },
+    paste = {
+      ['+'] = osc52.paste('+'),
+      ['*'] = osc52.paste('*'),
+    },
+  }
 end
