@@ -19,7 +19,11 @@ M.themes = {
   { id = 'carbonfox',  plugin = 'nightfox.nvim',  scheme = 'carbonfox',        label = 'carbonfox · 纯黑冷调' },
 }
 
-M.default_theme = 'kanagawa'
+-- 默认主题。选 oxocarbon 而不是 kanagawa:后者的底色 #1f1f28 是偏蓝的
+-- (B=40 而 R=G=31),整屏会泛蓝。oxocarbon 的底色 #161616 是真正中性的黑
+-- (R=G=B=22),而且它本身就是单色主题,连强调色都不带蓝。
+-- 其余三套(catppuccin #1e1e2e、rose-pine #191724)底色同样偏蓝。
+M.default_theme = 'oxocarbon'
 
 -- ── 状态读写 ────────────────────────────────────────────────────────────
 -- 存在 state 目录而不是仓库里,所以这个选择不会跟着 git 同步到另一台机器。

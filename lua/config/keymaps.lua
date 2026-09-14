@@ -131,8 +131,13 @@ map('n', '<leader>xq', '<cmd>copen<CR>', { desc = '打开快速修复列表' })
 
 -- ── 终端 ────────────────────────────────────────────────────────────────
 -- 浮动终端,自己实现的(见 config/terminal.lua),不装插件。
+-- 终端开在**当前文件所在目录**,所以打开 .c 文件后按 <Space>tt 就能直接
+-- gcc xxx.c -o xxx && ./xxx,不用先 cd。
 -- 收起时只隐藏窗口、不杀进程,下次打开还是同一个会话。
 map('n', '<leader>tt', function()
   require('config.terminal').toggle()
-end, { desc = '浮动终端:开关' })
+end, { desc = '浮动终端:开关(开在当前文件目录)' })
+map('n', '<leader>tT', function()
+  require('config.terminal').restart()
+end, { desc = '浮动终端:在当前文件目录重开' })
 map('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = '终端:回到普通模式' })
