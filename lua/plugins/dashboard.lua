@@ -145,26 +145,26 @@ local function blend(c1, c2, t)
   return r * 65536 + g * 256 + b
 end
 
---- 从主题里取颜色。取不到就返回 nil,调用方走 link 回退。
-local function theme_colors()
-  local function fg_of(name)
-    local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = name })
-    return ok and hl and hl.fg or nil
-  end
-  local bright = fg_of('Title') or fg_of('Function') or fg_of('Special')
+--- 标题用的颜色。
+--
+-- 【为什么写死,不跟主题走】
+-- 原来是从主题里取 Title 的 fg。于是标题颜色随主题漂移 —— 实测:
+--   catppuccin(Trae 配色)  Title = #80bbff  → 整个主界面是蓝的
+--   oxocarbon(单色主题)    Title 是灰白      → 才是记忆里的黑白
+-- 同一个「首页」在不同主题下情绪完全不同,不该这样,所以固定成中性白。
+--
+-- 底色仍然读 Normal 的背景:config/theme.lua 的 apply_pure_black() 已经把它
+-- 压成纯黑,读出来就是黑的;万一哪天不压黑了,渐变也还能跟着背景走。
+local HEADER_FG = 0xd8d8d8 -- 中性白,不带任何色相
+
+local function header_colors()
   local normal = vim.api.nvim_get_hl(0, { name = 'Normal' })
-  if not bright then
-    return nil
-  end
-  return { bright = bright, bg = normal.bg or 0x000000 }
+  return { bright = HEADER_FG, bg = normal.bg or 0x000000 }
 end
 
 --- 给多行字符画生成「自上而下由亮到暗」的渐变高亮。
 -- 每行一个高亮组;alpha 的 hl 支持按行、按列分段。
 local function gradient_hl(n_rows, colors)
-  if not colors then
-    return 'SnakeDashboardHeader'
-  end
   local hl = {}
   for i = 1, n_rows do
     local t = (i - 1) / math.max(1, n_rows - 1)
@@ -317,7 +317,7 @@ local function build_layout()
   local win_h = math.max(1, vim.o.lines - vim.o.cmdheight)
 
   local header = pick_header(win_w)
-  local colors = theme_colors()
+  local colors = header_colors()
   local mw = menu_width(win_w, width(header[1]))
   local spacing = 1
 
@@ -421,7 +421,10 @@ return {
       vim.api.nvim_set_hl(0, 'SnakeDashboardShortcut', { link = 'Special' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardFooter', { link = 'Comment' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardSeparator', { link = 'WinSeparator' })
-      vim.api.nvim_set_hl(0, 'SnakeDashboardHeader', { link = 'Title' })
+      -- 注意:这里**没有** SnakeDashboardHeader(不带数字)那个组。
+      -- 它原来是渐变取不到颜色时的 link 回退,现在标题色固定为中性白、
+      -- 渐变必然能生成,回退路径不存在了,留着就是死代码。
+      -- 带数字的 SnakeDashboardHeader1..N 由上面的 gradient_hl 逐行生成。
       -- 选中行:整行铺一层底色,像 telescope / fzf 的选中行
       vim.api.nvim_set_hl(0, 'SnakeDashboardSelected', { link = 'Visual' })
 
