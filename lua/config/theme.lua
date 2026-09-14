@@ -19,12 +19,18 @@ M.themes = {
   { id = 'carbonfox',  plugin = 'nightfox.nvim',  scheme = 'carbonfox',        label = 'carbonfox · 纯黑冷调' },
 }
 
--- 默认主题。选 oxocarbon 而不是 kanagawa:后者的底色 #1f1f28 是偏蓝的
--- (B=40 而 R=G=31),整屏会泛蓝。oxocarbon 的底色 #161616 是真正中性的黑
--- (R=G=B=22),而且它本身就是单色主题,连强调色都不带蓝。
--- 其余几套(kanagawa #1f1f28、rose-pine #191724)底色都偏蓝。
--- (catppuccin 那一项已经被调成 Trae 配色,底色 #1a1b1d 也是中性黑。)
-M.default_theme = 'oxocarbon'
+-- 默认主题:catppuccin(已被调成 Trae 的配色,见 plugins/colorschemes.lua)。
+--
+-- 底色 #1a1b1d 是中性黑(R=27 G=27 B=29,几乎不偏色),同时保留了 Trae 那套
+-- 柔和粉彩 —— 写代码时语法区分度比单色好,观感也和日常用的编辑器一致。
+--
+-- 曾经默认 oxocarbon(底色 #161616,R=G=B=22,真正中性,且是单色主题)。
+-- 想要极简无彩时切过去即可,它还在列表里,只是不再做默认。
+-- 其余几套的底色都偏蓝(kanagawa #1f1f28、rose-pine #191724 的 B 通道比 R/G 高)。
+--
+-- ⚠️ 改这里**只对还没有主题记录的机器生效**。state 文件里记住的 theme 会覆盖
+-- 默认值,所以已有机器要么手动选一次,要么把 state 里的 theme 字段清掉。
+M.default_theme = 'catppuccin'
 
 -- ── 状态读写 ────────────────────────────────────────────────────────────
 -- 存在 state 目录而不是仓库里,所以这个选择不会跟着 git 同步到另一台机器。

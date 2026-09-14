@@ -342,14 +342,19 @@ local ADAPTIVE = true      -- 关掉就固定块体、不垂直居中
 
 | 主题 | 底色 | 风格 |
 |---|---|---|
-| **oxocarbon**(默认) | `#161616` 中性黑 | 单色极简,连强调色都不带蓝 |
+| **catppuccin**(默认) | `#1a1b1d` 中性黑 | **Trae 配色**:近黑底 + 柔和粉彩 |
+| oxocarbon | `#161616` 中性黑 | 单色极简,连强调色都不带蓝 |
 | carbonfox | `#161616` 中性黑 | 纯黑冷调,但强调色是蓝的 |
 | kanagawa | `#1f1f28` 偏蓝 | 深墨底,蓝紫点缀 |
-| catppuccin | `#1a1b1d` 中性黑 | **Trae 配色**:近黑底 + 柔和粉彩 |
 | rose-pine | `#191724` 偏蓝 | 优雅紫调 |
 
-默认选 oxocarbon 的原因:只有它的底色是**真正中性**的(R=G=B=22),
-而且它是单色主题、强调色也不带蓝。其余几套的底色都偏蓝(B 通道比 R/G 高)。
+默认选 catppuccin 的原因:它已经被调成 **Trae 的配色**(下一条有详述),
+底色 `#1a1b1d` 同样是中性黑(R≈G≈B),但保留了柔和粉彩的强调色 ——
+写代码时语法区分度比单色好,观感也和日常用的编辑器一致。
+
+> 曾经默认 oxocarbon:它底色 `#161616` 是真正中性的黑(R=G=B=22),而且是
+> 单色主题、连强调色都不带蓝。想要极简无彩时切过去即可,它还在列表里。
+> 其余几套(carbonfox / kanagawa / rose-pine)的底色都偏蓝(B 通道比 R/G 高)。
 
 > **catppuccin 那一项被调成了 Trae 的配色。** 色值不是猜的,是从本机 Trae CN 的
 > `globalStorage/state.vscdb` 里读出来的:它的主题其实是 `icube-themes` 扩展的
@@ -359,13 +364,24 @@ local ADAPTIVE = true      -- 关掉就固定块体、不垂直居中
 > 实现方式是 catppuccin 的 `color_overrides`(见 `plugins/colorschemes.lua`),
 > 前 15 个槽位直接取自 Trae,所以零新增依赖。
 
-> 换主题的方式:改 `lua/config/theme.lua` 里的 `M.default_theme`,
-> **并且**清掉 `stdpath('state')/snakenvim.json` 里记住的 `theme` ——
-> 那个记录会覆盖默认值,只改默认是不生效的。
+> 换默认主题的方式:改 `lua/config/theme.lua` 里的 `M.default_theme`,
+> **并且**清掉 state 文件里记住的 `theme` —— 那个记录会覆盖默认值,
+> 只改默认是不生效的。
+>
+> 文件位置:
+> - macOS `~/.local/state/nvim/snakenvim.json`
+> - Windows `%LOCALAPPDATA%\nvim-data\state\snakenvim.json`
+>
+> 最省事的替代做法:直接在**那台机器上**按 `<Space>ut` 选一次。
 
 **换主题的方式不限**:选择器、手敲 `:colorscheme xxx` 都会被记住。
 记录写在 `stdpath('state')` 里,所以**每台机器各记各的** ——
 Windows 上选 kanagawa、iPad 上选 carbonfox 互不影响。
+
+> ⚠️ **这条的代价**:改了 `M.default_theme` 推上去,**已有机器不会跟着变** ——
+> 它们 state 里记着旧主题,会继续用旧的,看起来就是「配色没有更新过来」。
+> 要么在每台机器上手动选一次,要么按上面的路径删掉 state 里的 `theme` 字段。
+> 只有从没选过主题的新机器(没有 state 文件)才会直接用新默认值。
 
 启动时只加载当前主题那一套,其余 4 套等你切换时才加载。
 
