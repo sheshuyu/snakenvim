@@ -1,6 +1,6 @@
--- snake's neovim — 自动命令
+-- snakenvim — 自动命令
 
-local group = vim.api.nvim_create_augroup('snake_autocmds', { clear = true })
+local group = vim.api.nvim_create_augroup('snakenvim_autocmds', { clear = true })
 
 -- ── 重新打开文件时回到上次的光标位置 ────────────────────────────────────
 vim.api.nvim_create_autocmd('BufReadPost', {
@@ -52,8 +52,12 @@ vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'CursorHold' }, {
   end,
 })
 
--- ── :Snake 状态速查 ─────────────────────────────────────────────────────
-vim.api.nvim_create_user_command('Snake', function()
-  local lines = require('snake.health').summary()
-  vim.notify(table.concat(lines, '\n'), vim.log.levels.INFO, { title = "snake's neovim" })
-end, { desc = "显示 snake's neovim 当前状态" })
+-- ── :Snakenvim 状态速查 ─────────────────────────────────────────────────
+-- :Snake 留作短别名,打字方便
+local function show_status()
+  local lines = require('snakenvim.health').summary()
+  vim.notify(table.concat(lines, '\n'), vim.log.levels.INFO, { title = 'snakenvim' })
+end
+
+vim.api.nvim_create_user_command('Snakenvim', show_status, { desc = '显示 snakenvim 当前状态' })
+vim.api.nvim_create_user_command('Snake', show_status, { desc = '同 :Snakenvim(短别名)' })

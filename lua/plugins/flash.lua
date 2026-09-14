@@ -1,4 +1,4 @@
--- snake's neovim — 屏幕内快速跳转(flash.nvim)
+-- snakenvim — 屏幕内快速跳转(flash.nvim)
 --
 -- 和 LSP 跳转是两回事,互补:
 --   flash        在「当前屏幕」上跳到任意位置 —— 输入一两个字符,所有匹配处

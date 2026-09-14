@@ -1,4 +1,4 @@
--- snake's neovim — 状态栏与键位提示
+-- snakenvim — 状态栏与键位提示
 --
 -- 状态栏刻意**不使用任何图标字母**:诊断用 E/W/I/H 文字、分隔符留空。
 -- 这样无论终端字体是否装了 Nerd Font,状态栏都不会出现豆腐块。
@@ -37,7 +37,7 @@ return {
         sections = {
           lualine_a = { 'mode' },
           lualine_b = {
-            { function() return "snake's nvim" end },
+            { function() return "snakenvim" end },
             'branch',
             'diff',
           },

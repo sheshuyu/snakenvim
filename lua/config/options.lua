@@ -1,4 +1,4 @@
--- snake's neovim — 编辑器选项
+-- snakenvim — 编辑器选项
 --
 -- 平台差异一律通过 config.profile 的开关判断,这里不直接写 is_windows 之类的判断。
 

@@ -1,4 +1,4 @@
--- snake's neovim — LSP 配置
+-- snakenvim — LSP 配置
 --
 -- 这里只做两件事:
 --   1. 所有 server 共用的行为(LspAttach 时挂键位、调诊断显示)
@@ -38,7 +38,7 @@ vim.lsp.config('lua_ls', {
 
 -- ── 所有 server 共用的键位与行为 ────────────────────────────────────────
 vim.api.nvim_create_autocmd('LspAttach', {
-  group = vim.api.nvim_create_augroup('snake_lsp_attach', { clear = true }),
+  group = vim.api.nvim_create_augroup('snakenvim_lsp_attach', { clear = true }),
   callback = function(args)
     local bufnr = args.buf
     local client = vim.lsp.get_client_by_id(args.data.client_id)
@@ -93,7 +93,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
 
     -- 高亮当前符号的所有引用,光标停一会自动出现
     if client:supports_method('textDocument/documentHighlight', bufnr) then
-      local group = vim.api.nvim_create_augroup('snake_lsp_highlight_' .. bufnr, { clear = true })
+      local group = vim.api.nvim_create_augroup('snakenvim_lsp_highlight_' .. bufnr, { clear = true })
       vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
         group = group,
         buffer = bufnr,

@@ -1,4 +1,4 @@
--- snake's neovim — 浮动终端
+-- snakenvim — 浮动终端
 --
 -- 不装插件:浮动窗口 + 一个常驻的终端缓冲区,几十行就够,
 -- 而且行为完全可控(插件多数是包一层 GUI,反而不好调)。
@@ -30,7 +30,7 @@ end
 
 local function has_terminal()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == 'snake_term' then
+    if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == 'snakenvim_term' then
       return buf
     end
   end
@@ -77,7 +77,7 @@ local function spawn()
   state.win = vim.api.nvim_get_current_win()
 
   vim.fn.termopen(vim.o.shell, { cwd = state.dir })
-  vim.bo[buf].filetype = 'snake_term'
+  vim.bo[buf].filetype = 'snakenvim_term'
   apply_float(state.win)
   vim.cmd('startinsert')
 end
@@ -110,7 +110,7 @@ function M.toggle()
     local want = target_dir()
     if state.dir and want ~= state.dir then
       vim.notify(
-        ("snake's neovim:终端还停在 %s\n当前文件在 %s —— 按 <Space>tT 在新目录重开"):format(
+        ("snakenvim:终端还停在 %s\n当前文件在 %s —— 按 <Space>tT 在新目录重开"):format(
           vim.fn.fnamemodify(state.dir, ':t'),
           vim.fn.fnamemodify(want, ':t')
         ),
@@ -135,8 +135,8 @@ end
 --- 终端里按 <Esc><Esc> 回普通模式。只在我们的终端缓冲区里生效,
 --- 不影响普通 buffer 的映射。
 vim.api.nvim_create_autocmd('FileType', {
-  group = vim.api.nvim_create_augroup('snake_term', { clear = true }),
-  pattern = 'snake_term',
+  group = vim.api.nvim_create_augroup('snakenvim_term', { clear = true }),
+  pattern = 'snakenvim_term',
   callback = function(args)
     vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { buf = args.buf, desc = '终端:回普通模式' })
     -- 普通模式下按 q 收起浮窗(和 help/qf 的行为一致)

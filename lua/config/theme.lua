@@ -1,4 +1,4 @@
--- snake's neovim — 主题与图标
+-- snakenvim — 主题与图标
 --
 -- 设计要点:
 --   * 5 套主题里只有「当前这套」在启动时加载,其余 4 套等你切换时才加载
@@ -27,7 +27,7 @@ M.default_theme = 'oxocarbon'
 
 -- ── 状态读写 ────────────────────────────────────────────────────────────
 -- 存在 state 目录而不是仓库里,所以这个选择不会跟着 git 同步到另一台机器。
-local state_path = vim.fn.stdpath('state') .. '/snake-nvim.json'
+local state_path = vim.fn.stdpath('state') .. '/snakenvim.json'
 
 local function read_state()
   local f = io.open(state_path, 'r')
@@ -104,7 +104,7 @@ function M.apply(id)
   end)
 
   if not pcall(vim.cmd.colorscheme, t.scheme) then
-    vim.notify(("snake's neovim:主题 %s 应用失败"):format(t.id), vim.log.levels.WARN)
+    vim.notify(("snakenvim:主题 %s 应用失败"):format(t.id), vim.log.levels.WARN)
     return
   end
   M.state.theme = t.id
@@ -158,7 +158,7 @@ function M.apply_mosh_opts()
   vim.opt.cursorline = not on
   vim.opt.updatetime = on and 500 or 250
   vim.g.miniindentscope_disable = on
-  vim.g.snake_mosh_opts = on
+  vim.g.snakenvim_mosh_opts = on
 end
 
 -- ── 交互命令 ────────────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ function M.pick()
     require('telescope.builtin').colorscheme({ enable_preview = true })
   end)
   if not ok then
-    vim.notify("snake's neovim:telescope 尚未就绪,稍后重试", vim.log.levels.WARN)
+    vim.notify("snakenvim:telescope 尚未就绪,稍后重试", vim.log.levels.WARN)
   end
 end
 
@@ -183,7 +183,7 @@ function M.toggle_icons()
   M.state.icons = not M.state.icons
   M.apply_icons()
   write_state()
-  vim.notify(("snake's neovim:图标 %s"):format(M.state.icons and '已开启' or '已关闭(改用 ASCII)'))
+  vim.notify(("snakenvim:图标 %s"):format(M.state.icons and '已开启' or '已关闭(改用 ASCII)'))
 end
 
 function M.toggle_mosh_opts()
@@ -191,7 +191,7 @@ function M.toggle_mosh_opts()
   M.apply_mosh_opts()
   write_state()
   vim.notify(
-    ("snake's neovim:mosh 卡顿优化 %s"):format(M.state.mosh_opts and '已开启(cursorline 关闭)' or '已关闭')
+    ("snakenvim:mosh 卡顿优化 %s"):format(M.state.mosh_opts and '已开启(cursorline 关闭)' or '已关闭')
   )
 end
 
@@ -205,7 +205,7 @@ end
 
 -- 换主题时只刷新 lualine 配色,不记录选择(原因见下面 VimLeavePre 那段)
 vim.api.nvim_create_autocmd('ColorScheme', {
-  group = vim.api.nvim_create_augroup('snake_theme_track', { clear = true }),
+  group = vim.api.nvim_create_augroup('snakenvim_theme_track', { clear = true }),
   callback = function()
     pcall(function() require('lualine').refresh() end)
   end,
@@ -229,7 +229,7 @@ vim.api.nvim_create_autocmd('ColorScheme', {
 -- 代价:手动 `:colorscheme habamax` 这类列表外的主题不会被记住 ——
 -- 相比「选择被莫名重置」,这个代价划算得多。
 vim.api.nvim_create_autocmd('VimLeavePre', {
-  group = vim.api.nvim_create_augroup('snake_theme_persist', { clear = true }),
+  group = vim.api.nvim_create_augroup('snakenvim_theme_persist', { clear = true }),
   callback = function()
     local name = vim.g.colors_name
     if name and name ~= '' then

@@ -1,4 +1,4 @@
--- snake's neovim — 补全 / LSP / 格式化
+-- snakenvim — 补全 / LSP / 格式化
 --
 -- 「装哪些服务器、哪些文件类型用哪个格式化器」全部来自 config/langs.lua,
 -- 这里不重复声明清单 —— 加语言请改那个文件。

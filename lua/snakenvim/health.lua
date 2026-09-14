@@ -1,11 +1,11 @@
--- snake's neovim — 环境自检
+-- snakenvim — 环境自检
 --
 -- 用法:
---   :checkhealth snake   完整检查(缺什么、怎么装)
---   :Snake               一行行看当前状态
+--   :checkhealth snakenvim   完整检查(缺什么、怎么装)
+--   :Snakenvim               一行行看当前状态
 --
--- 放在 lua/snake/ 而不是 lua/config/,是因为 nvim 的约定要求目录名和
--- :checkhealth 的命令名一致 —— 这样才会被识别成 :checkhealth snake。
+-- 放在 lua/snakenvim/ 而不是 lua/config/,是因为 nvim 的约定要求目录名和
+-- :checkhealth 的命令名一致 —— 这样才会被识别成 :checkhealth snakenvim。
 
 local M = {}
 
@@ -71,7 +71,7 @@ local function find_tool(tool)
   return nil
 end
 
---- 返回一个状态列表,供 :checkhealth 和 :Snake 共用
+--- 返回一个状态列表,供 :checkhealth 和 :Snakenvim 共用
 function M.status()
   local profile = require('config.profile')
   local langs = require('config.langs')
@@ -116,7 +116,7 @@ end
 function M.summary()
   local s = M.status()
   local lines = {
-    "snake's neovim",
+    "snakenvim",
     ('  平台      : %s'):format(s.platform),
     ('  剪贴板    : %s%s'):format(
       s.clipboard,
@@ -145,12 +145,15 @@ function M.summary()
   return lines
 end
 
---- :checkhealth snake 的入口
+--- :checkhealth snakenvim 的入口
 function M.check()
   local h = vim.health
   local s = M.status()
 
-  h.start("snake's neovim")
+  -- 注意:这里不要再 h.start('snakenvim')。
+  -- :checkhealth 的命令名本身已经生成了 "snakenvim:" 那个顶层标题,
+  -- 再 start 一次同名小节会多出一层重复的空标题。
+  h.start('环境')
 
   h.info('平台:' .. s.platform)
   if s.remote then

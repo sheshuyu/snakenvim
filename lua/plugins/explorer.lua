@@ -1,4 +1,4 @@
--- snake's neovim — 侧边文件树
+-- snakenvim — 侧边文件树
 --
 -- 选 nvim-tree 而不是 neo-tree:最新提交都是 2026-09-07,都在活跃维护,
 -- 但 nvim-tree 只依赖 nvim-web-devicons,neo-tree 还要多拉 nui 和 plenary

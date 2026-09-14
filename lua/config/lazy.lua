@@ -1,4 +1,4 @@
--- snake's neovim — lazy.nvim 自举
+-- snakenvim — lazy.nvim 自举
 --
 -- 第一次启动时自动把 lazy.nvim 拉下来,之后正常加载。
 -- 插件本体装在 stdpath('data')/lazy,在仓库之外,所以 git pull 不会和插件文件冲突。
@@ -16,7 +16,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
   })
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
-      { "snake's neovim:lazy.nvim 下载失败,请检查网络或 git 是否可用。\n", 'ErrorMsg' },
+      { "snakenvim:lazy.nvim 下载失败,请检查网络或 git 是否可用。\n", 'ErrorMsg' },
       { out, 'WarningMsg' },
     }, true, {})
     return

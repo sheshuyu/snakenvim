@@ -1,4 +1,4 @@
--- snake's neovim — 启动界面
+-- snakenvim — 启动界面
 --
 -- 用 alpha-nvim:它只提供 text / padding / button / group 四个布局原语,
 -- 正好对应「一段 ASCII header + 几个入口」的需求,不夹带文件浏览器之类的
@@ -268,7 +268,7 @@ local ENTRIES = {
 --- 按窗口宽度挑字样
 local function pick_header(win_w)
   if FORCE_HEADER == 'text' then
-    return { "snake's neovim" }
+    return { "snakenvim" }
   end
   if FORCE_HEADER == 'shadow' then
     return HEADERS.shadow
@@ -286,7 +286,7 @@ local function pick_header(win_w)
   if win_w >= width(HEADERS.block[1]) + 8 then
     return HEADERS.block
   end
-  return { "snake's neovim" }
+  return { "snakenvim" }
 end
 
 --- 菜单宽度:跟着 header 走,让两者的宽度比例看起来是刻意设计的
@@ -367,7 +367,7 @@ local function build_layout()
     content[#content + 1] = { type = 'padding', val = 1 }
     content[#content + 1] = {
       type = 'text',
-      val = { "snake's neovim", '按 <Space> 查看所有键位' },
+      val = { "snakenvim", '按 <Space> 查看所有键位' },
       opts = { position = 'center', hl = 'SnakeDashboardFooter' },
     }
   end
@@ -416,7 +416,7 @@ return {
       vim.opt.shortmess:append('I')
 
       local conf = build_layout()
-      local aug = vim.api.nvim_create_augroup('snake_dashboard', { clear = true })
+      local aug = vim.api.nvim_create_augroup('snakenvim_dashboard', { clear = true })
 
       --- 重算布局并重绘(窗口变化、换主题时用)
       local function relayout()
@@ -451,7 +451,7 @@ return {
       -- 不用 cursorline:cursorline 会铺满整个屏幕宽度,而菜单只有几十列,
       -- 那条横杠会和菜单完全脱节(渲染出来看过,很怪)。
       -- 改用 extmark 只在菜单的列范围内铺底色,选中效果刚好框住菜单那一块。
-      local sel_ns = vim.api.nvim_create_namespace('snake_dashboard_sel')
+      local sel_ns = vim.api.nvim_create_namespace('snakenvim_dashboard_sel')
 
       local function paint_selection()
         local buf = vim.api.nvim_get_current_buf()

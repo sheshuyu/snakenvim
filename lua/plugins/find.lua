@@ -1,4 +1,4 @@
--- snake's neovim — 模糊查找(telescope)
+-- snakenvim — 模糊查找(telescope)
 --
 -- 选 telescope 而不是 fzf-lua:机器上没有 fzf 二进制,而 rg 和 fd 都已就绪。
 -- telescope 是纯 Lua,不依赖外部可执行文件,两个平台表现一致。

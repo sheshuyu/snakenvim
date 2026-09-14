@@ -1,4 +1,4 @@
--- snake's neovim — Git
+-- snakenvim — Git
 --
 -- 只做「显示改动 + 快速跳转/暂存」。不做完整的 Git 客户端界面,
 -- 需要提交/推送时用 <Space>gg 直接开 lazygit(若装了)或 :terminal git。

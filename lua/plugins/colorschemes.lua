@@ -1,4 +1,4 @@
--- snake's neovim — 5 套主题
+-- snakenvim — 5 套主题
 --
 -- 全部 lazy = true:启动时只有 config/theme.lua 里记住的那一套会被加载,
 -- 其余 4 套等你按 <Space>ut 切换时才加载。

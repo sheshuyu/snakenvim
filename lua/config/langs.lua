@@ -1,4 +1,4 @@
--- snake's neovim — 语言单一数据源
+-- snakenvim — 语言单一数据源
 --
 -- 【加一门语言 = 往下面 M.languages 加一项】,四件事会自动跟着生效:
 --   1. LSP 服务器  (lsp 字段)       → 交给 mason 自动安装并启用

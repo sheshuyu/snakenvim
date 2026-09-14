@@ -1,4 +1,4 @@
--- snake's neovim — 语法高亮与编辑增强
+-- snakenvim — 语法高亮与编辑增强
 
 local theme = require('config.theme')
 local langs = require('config.langs')
@@ -52,12 +52,12 @@ return {
         vim.schedule(function()
           vim.notify(
             table.concat({
-              "snake's neovim:未找到 tree-sitter-cli,cpp / python 的语法高亮暂不可用。",
+              "snakenvim:未找到 tree-sitter-cli,cpp / python 的语法高亮暂不可用。",
               '其余功能一切正常,C 和 Lua 用的是 nvim 自带解析器,不受影响。',
               '安装后重启即可自动补上:',
               '  Windows:  scoop install tree-sitter',
               '  macOS:    brew install tree-sitter',
-              '详细状态::checkhealth snake',
+              '详细状态::checkhealth snakenvim',
             }, '\n'),
             vim.log.levels.WARN
           )
@@ -71,7 +71,7 @@ return {
       -- 逐个缓冲区决定用哪种高亮
       local warned = {}
       vim.api.nvim_create_autocmd('FileType', {
-        group = vim.api.nvim_create_augroup('snake_treesitter', { clear = true }),
+        group = vim.api.nvim_create_augroup('snakenvim_treesitter', { clear = true }),
         callback = function(args)
           local ft = vim.bo[args.buf].filetype
 
@@ -92,7 +92,7 @@ return {
               warned[ft] = true
               vim.schedule(function()
                 vim.notify(
-                  ("snake's neovim:%s 已回退到内置正则高亮。装好 tree-sitter-cli 后重启,再执行 :TSInstall %s"):format(
+                  ("snakenvim:%s 已回退到内置正则高亮。装好 tree-sitter-cli 后重启,再执行 :TSInstall %s"):format(
                     ft,
                     ft
                   ),

@@ -1,9 +1,9 @@
--- snake's neovim
+-- snakenvim
 --
 -- 入口只做 require,真正的逻辑都在 lua/config/ 下,方便单独定位和修改。
 -- 加载顺序有讲究,不要随意调整,原因见每行注释。
 
-vim.g.snake_nvim = true
+vim.g.snakenvim = true
 
 -- leader 必须在 lazy.setup 之前设好:keymaps 和插件定义里的 <leader> 都依赖它,
 -- 缺了这行会静默退回默认的反斜杠,整套 <Space> 键位方案全部失效。

@@ -1,4 +1,4 @@
-# snake's neovim
+# snakenvim
 
 一套精简、可跨平台同步的 Neovim 配置。Windows 和 macOS 共用同一份仓库,
 Win11 上用 Windows Terminal、macOS 上也可能被 iPad 通过 mosh 远程使用。
@@ -48,7 +48,7 @@ git clone <仓库地址> ~/.config/nvim
 **缺失不会导致 nvim 起不来。** 少了 `tree-sitter-cli` 时 cpp / python 会自动退回
 内置的正则高亮并给出提示,C 和 Lua 用的是 nvim 自带解析器,不受影响。
 
-随时用 `:checkhealth snake` 查看缺什么、怎么装,或 `:Snake` 看一行行状态速查。
+随时用 `:checkhealth snakenvim` 查看缺什么、怎么装,或 `:Snakenvim` 看一行行状态速查。
 
 ---
 
@@ -206,7 +206,7 @@ oil 里按 `q` 关闭(nvim-tree 不会接管「打开目录」的行为,`nvim <�
               ▸  退出 ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ q
 
 
-                        snake's neovim
+                        snakenvim
                         按 <Space> 查看所有键位
 ```
 
@@ -228,7 +228,7 @@ oil 里按 `q` 关闭(nvim-tree 不会接管「打开目录」的行为,`nvim <�
   配色方案里取(实测 kanagawa 出蓝、oxocarbon 出灰白),换主题会自动跟着变
 - **菜单用引导线拉满**:每行做成 `▸ 标签 ┈┈┈┈ 快捷键` 的完整条目,
   而不是几根飘在巨大 header 下面的小字 —— 菜单整体成为一个有分量的块
-- **选中行整行铺底色**,像 telescope / fzf 的选中行,一眼能看到选的是哪个
+- **选中条只框住菜单那一块**(不是整行铺满),像 fzf 的选中行
 
 ### 自适应行为
 
@@ -261,7 +261,7 @@ local ADAPTIVE = true      -- 关掉就固定块体、不垂直居中
 某行多打或少打一个空格不会让整幅画错位。
 
 **注意 ANSI Shadow 不要放大**:`╔╗` 这类角字符一拉伸就散架(不像 `█` 可以
-精确复制),所以它只用原始尺寸,靠全宽的装饰带把屏幕撑满。
+精确复制),所以它只用原始尺寸。
 
 字符用的是 `█ ═ ║` 这类通用符号而不是 Nerd Font 私有码点:
 任何等宽字体都有这些字形,iPad 上走 mosh 也不会变成豆腐块。
@@ -284,7 +284,7 @@ local ADAPTIVE = true      -- 关掉就固定块体、不垂直居中
 而且它是单色主题、强调色也不带蓝。其余几套的底色都偏蓝(B 通道比 R/G 高)。
 
 > 换主题的方式:改 `lua/config/theme.lua` 里的 `M.default_theme`,
-> **并且**清掉 `stdpath('state')/snake-nvim.json` 里记住的 `theme` ——
+> **并且**清掉 `stdpath('state')/snakenvim.json` 里记住的 `theme` ——
 > 那个记录会覆盖默认值,只改默认是不生效的。
 
 **换主题的方式不限**:选择器、手敲 `:colorscheme xxx` 都会被记住。
@@ -395,7 +395,7 @@ lua/config/
   theme.lua                 ★ 主题切换 + 记忆 + 图标开关
   lazy.lua                  lazy.nvim 自举
 lua/plugins/                插件定义(按用途分组)
-lua/snake/health.lua        :checkhealth snake 的实现
+lua/snakenvim/health.lua        :checkhealth snakenvim 的实现
 ```
 
 两个 `★` 标记的文件是核心抽象:平台/远程差异全部收敛进 `profile.lua`,

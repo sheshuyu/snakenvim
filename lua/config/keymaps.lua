@@ -1,4 +1,4 @@
--- snake's neovim — 键位
+-- snakenvim — 键位
 --
 -- leader 是空格。按 <Space> 会由 which-key 弹出分组提示,不用背。
 -- 分组结构参照 AstroNvim / LazyVim 的惯例:
@@ -84,14 +84,14 @@ map('n', '<leader>Y', '"+Y', { desc = '复制整行到系统剪贴板' })
 if profile.remote and profile.is_mac then
   local function pbcopy(text)
     if text == nil or text == '' then
-      vim.notify("snake's neovim:没有内容可复制", vim.log.levels.WARN)
+      vim.notify("snakenvim:没有内容可复制", vim.log.levels.WARN)
       return
     end
     vim.fn.system({ 'pbcopy' }, text)
     if vim.v.shell_error == 0 then
-      vim.notify(("snake's neovim:已复制到被连的 mac 剪贴板(%d 字节)"):format(#text))
+      vim.notify(("snakenvim:已复制到被连的 mac 剪贴板(%d 字节)"):format(#text))
     else
-      vim.notify("snake's neovim:pbcopy 调用失败", vim.log.levels.ERROR)
+      vim.notify("snakenvim:pbcopy 调用失败", vim.log.levels.ERROR)
     end
   end
 
