@@ -78,7 +78,7 @@ end
 
 -- ── 剪贴板实际通道 ──────────────────────────────────────────────────────
 -- 上面设的 clipboard = unnamedplus 只说明「用系统剪贴板」,具体走哪条通道
--- 由 profile 决定。远程(mosh/ssh)时改用 OSC52:让 y 的结果跟着 mosh 通道
+-- 由 profile 决定。远程(SSH / mosh)时改用 OSC52:让 y 的结果跟着连接通道
 -- 回到眼前的终端,而不是留在被连接的那台机器上 —— 不然在 iPad 上按 y
 -- 是复制到了 mac 的剪贴板,粘贴时什么也得不到。
 if profile.clipboard == 'osc52' then

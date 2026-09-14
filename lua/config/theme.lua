@@ -60,8 +60,8 @@ end
 if type(M.state.icons) ~= 'boolean' then
   M.state.icons = true -- 默认开启,与电脑端一致
 end
-if type(M.state.mosh_opts) ~= 'boolean' then
-  M.state.mosh_opts = false -- 默认关闭,觉得卡再开
+if type(M.state.remote_opts) ~= 'boolean' then
+  M.state.remote_opts = false -- 默认关闭,觉得卡再开
 end
 
 --- 当前是否使用图标(供 lualine 等插件读取)
@@ -147,10 +147,10 @@ function M.apply_icons()
   pcall(function() require('lualine').refresh() end)
 end
 
---- mosh 卡顿优化开关。默认关闭 —— 横屏 + 物理键盘下体验和本机接近,
+--- 远程卡顿优化开关。默认关闭 —— 横屏 + 物理键盘下体验和本机接近,
 -- 没必要默认牺牲 cursorline。真觉得远程操作发涩时再开。
 --
--- 这几项都是「光标一动就重绘」的东西,在 ssh / mosh 链路上会被放大成发涩的手感:
+-- 这几项都是「光标一动就重绘」的东西,在 SSH / mosh 链路上会被放大成发涩的手感:
 --   cursorline          每次移动整行重绘
 --   缩进线(ibl)         每次移动重绘缩进指示线
 --   代码上下文头          mode='cursor',光标一动就要重算当前函数/类
@@ -158,11 +158,11 @@ end
 --
 -- 刻意**不管彩虹括号**:它的开销是按缓冲区变化触发的,不属于「光标一动就重绘」,
 -- 而且它只有按缓冲区的 API、没有全局开关。这不是漏做,别顺手补上。
-function M.apply_mosh_opts()
-  local on = M.state.mosh_opts
+function M.apply_remote_opts()
+  local on = M.state.remote_opts
   vim.opt.cursorline = not on
   vim.opt.updatetime = on and 500 or 250
-  vim.g.snakenvim_mosh_opts = on -- 下面两个插件的 opts 会读它,决定初始状态
+  vim.g.snakenvim_remote_opts = on -- 下面两个插件的 opts 会读它,决定初始状态
 
   -- 运行时切换。只在插件**已经加载**时才动手 —— 否则这里的 require 会把
   -- 懒加载的插件在启动时就提前拉起来,白白拖慢启动;而它们的 opts 已经读过
@@ -205,12 +205,12 @@ function M.toggle_icons()
   vim.notify(("snakenvim:图标 %s"):format(M.state.icons and '已开启' or '已关闭(改用 ASCII)'))
 end
 
-function M.toggle_mosh_opts()
-  M.state.mosh_opts = not M.state.mosh_opts
-  M.apply_mosh_opts()
+function M.toggle_remote_opts()
+  M.state.remote_opts = not M.state.remote_opts
+  M.apply_remote_opts()
   write_state()
   vim.notify(
-    ("snakenvim:mosh 卡顿优化 %s"):format(M.state.mosh_opts and '已开启(cursorline 关闭)' or '已关闭')
+    ("snakenvim:远程卡顿优化 %s"):format(M.state.remote_opts and '已开启(cursorline 关闭)' or '已关闭')
   )
 end
 
@@ -219,7 +219,7 @@ end
 function M.setup()
   M.apply(M.state.theme)
   M.apply_icons()
-  M.apply_mosh_opts()
+  M.apply_remote_opts()
 end
 
 -- 换主题时只刷新 lualine 配色,不记录选择(原因见下面 VimLeavePre 那段)

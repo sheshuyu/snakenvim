@@ -113,10 +113,10 @@ return {
       end)
 
       return {
-        -- mosh 卡顿优化开着时不启用。运行时切换在 config/theme.lua 的
-        -- apply_mosh_opts 里做 —— 那边用的是 require('ibl').update(),
+        -- 远程卡顿优化开着时不启用。运行时切换在 config/theme.lua 的
+        -- apply_remote_opts 里做 —— 那边用的是 require('ibl').update(),
         -- 只改 enabled 不碰这里的彩虹配色(用 setup 会把下面这组色重置掉)。
-        enabled = not vim.g.snakenvim_mosh_opts,
+        enabled = not vim.g.snakenvim_remote_opts,
         indent = {
           char = '│',
           highlight = rainbow,

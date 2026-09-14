@@ -79,7 +79,7 @@ map('x', '<leader>p', '"_dP', { desc = '粘贴(不覆盖寄存器)' })
 map({ 'n', 'v' }, '<leader>y', '"+y', { desc = '复制到系统剪贴板' })
 map('n', '<leader>Y', '"+Y', { desc = '复制整行到系统剪贴板' })
 
--- 通过 mosh 连到 mac 时,y 默认走 OSC52 回到 iPad。
+-- 通过 SSH 连到 mac 时,y 默认走 OSC52 回到 iPad。
 -- 如果 RootShell 不支持 OSC52,用这个键位直接送进 mac 本机的剪贴板。
 if profile.remote and profile.is_mac then
   local function pbcopy(text)
@@ -113,8 +113,8 @@ map('n', '<leader>ui', function()
   require('config.theme').toggle_icons()
 end, { desc = '图标 / ASCII 切换' })
 map('n', '<leader>uo', function()
-  require('config.theme').toggle_mosh_opts()
-end, { desc = 'mosh 卡顿优化开关' })
+  require('config.theme').toggle_remote_opts()
+end, { desc = '远程卡顿优化开关' })
 
 -- ── 诊断 ────────────────────────────────────────────────────────────────
 map('n', '<leader>cd', vim.diagnostic.open_float, { desc = '诊断:显示当前行' })

@@ -101,7 +101,7 @@ function M.status()
     clipboard = profile.clipboard,
     theme = require('config.theme').state.theme,
     icons = require('config.theme').state.icons,
-    mosh_opts = require('config.theme').state.mosh_opts,
+    remote_opts = require('config.theme').state.remote_opts,
     tools = {},
     formatters = {},
     servers = langs.lsp_servers(),
@@ -141,7 +141,7 @@ function M.summary()
     ),
     ('  主题      : %s'):format(s.theme),
     ('  图标      : %s'):format(s.icons and '开启' or '关闭(ASCII)'),
-    ('  mosh 优化 : %s'):format(s.mosh_opts and '开启' or '关闭'),
+    ('  远程优化 : %s'):format(s.remote_opts and '开启' or '关闭'),
   }
 
   if s.forced then
@@ -190,7 +190,7 @@ function M.check()
   h.start('主题与界面')
   h.info(('当前主题:%s'):format(s.theme))
   h.info(('图标:%s'):format(s.icons and '开启' or '关闭(ASCII)'))
-  h.info('mosh 卡顿优化:' .. (s.mosh_opts and '开启' or '关闭'))
+  h.info('远程卡顿优化:' .. (s.remote_opts and '开启' or '关闭'))
 
   -- 外部工具
   h.start('外部工具')

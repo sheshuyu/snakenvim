@@ -13,8 +13,10 @@ M.is_mac = sysname == 'Darwin'
 M.is_linux = sysname == 'Linux'
 
 -- ── 远程会话 ────────────────────────────────────────────────────────────
--- mosh 会在服务端进程里写入 MOSH_CONNECTION / MOSH_IP;
--- iPad RootShell 通过 mosh 连到 mac 时,这些变量在 nvim 进程里可见。
+-- iPad RootShell 连到 mac 时,服务端进程里能看到对应工具写入的环境变量:
+--   SSH  → SSH_CONNECTION / SSH_TTY   ← **当前用的是这个**
+--   mosh → MOSH_CONNECTION / MOSH_IP
+-- mosh 的检测保留着(哪天换回去不用重写),但实际走的是 SSH 那条。
 M.is_mosh = vim.env.MOSH_CONNECTION ~= nil or vim.env.MOSH_IP ~= nil
 M.is_ssh = vim.env.SSH_CONNECTION ~= nil or vim.env.SSH_TTY ~= nil
 M.remote = M.is_mosh or M.is_ssh
@@ -31,9 +33,9 @@ end
 
 -- ── 剪贴板 ──────────────────────────────────────────────────────────────
 -- 这是远程场景下唯一默认改变行为的地方,因为不改就是明确的错误结果:
--- 通过 mosh 操作 mac 上的 nvim 时,y 会把内容送进 **mac 的剪贴板**,
+-- 通过 SSH / mosh 操作 mac 上的 nvim 时,y 会把内容送进 **mac 的剪贴板**,
 -- 而你眼前的是 iPad —— 粘贴时什么也得不到。
--- 走 OSC52 则顺 mosh 通道把内容回传给 iPad 终端,符合直觉。
+-- 走 OSC52 则顺 SSH 通道把内容回传给 iPad 终端,符合直觉。
 M.clipboard = M.remote and 'osc52' or 'native'
 
 -- ── 终端能力 ────────────────────────────────────────────────────────────

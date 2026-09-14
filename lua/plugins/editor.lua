@@ -113,7 +113,7 @@ return {
   -- ── 彩虹括号 ────────────────────────────────────────────────────────
   -- 按嵌套层级给括号/引号上不同颜色,treesitter 驱动。
   --
-  -- 刻意**不挂到 mosh 卡顿开关**(<Space>uo)上:那个开关的定位是关掉
+  -- 刻意**不挂到 远程卡顿开关**(<Space>uo)上:那个开关的定位是关掉
   -- 「光标一动就重绘」的东西,而这个插件的开销是按**缓冲区变化**触发的,
   -- 不属于那一类;而且它只有按缓冲区的 API
   -- (require('rainbow-delimiters').enable/disable(bufnr))、没有全局命令,
@@ -136,13 +136,13 @@ return {
     event = { 'BufReadPre', 'BufNewFile' },
     opts = function()
       return {
-        -- mosh 卡顿优化开着时不启用。mode='cursor' 意味着**光标一移动就要
+        -- 远程卡顿优化开着时不启用。mode='cursor' 意味着**光标一移动就要
         -- 重算上下文**,正是那个开关要压制的东西。
         --
         -- 这里读一次决定初始状态;运行时的开关在 config/theme.lua 的
-        -- apply_mosh_opts 里(那边只在插件已加载时才调 :TSContext,避免
+        -- apply_remote_opts 里(那边只在插件已加载时才调 :TSContext,避免
         -- 为了切个开关就把懒加载的插件提前拉起来)。
-        enabled = not vim.g.snakenvim_mosh_opts,
+        enabled = not vim.g.snakenvim_remote_opts,
         mode = 'cursor',
         max_lines = 3, -- 别让它把顶部吃掉太多行
       }

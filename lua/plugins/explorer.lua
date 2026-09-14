@@ -36,6 +36,12 @@
 -- 所以 setup() 必须在启动后尽快跑到。换成 cmd 懒加载的话,`nvim <目录>`
 -- 永远等不到它 —— 这也是上游 README 对 open_for_directories 推荐 event 的原因。
 
+-- yazi 是**独立 TUI 程序**,插件只是把它塞进 nvim。所以必须检查二进制在不在 ——
+-- 不在的时候如果还去关 netrw、还去接管目录,结果就是 `nvim <目录>` 打开一个
+-- **空缓冲区,连目录都浏览不了**(netrw 被关了、yazi 又起不来)。
+-- 这个坑真的踩过:mac 上装了 yazi、Windows 上没装,Windows 那边目录就完全打不开。
+local has_yazi = vim.fn.executable('yazi') == 1
+
 return {
   {
     'mikavilpas/yazi.nvim',
@@ -51,14 +57,27 @@ return {
     keys = {
       {
         '<leader>e',
-        '<cmd>Yazi<cr>',
-        desc = '文件管理:打开 yazi(当前文件所在目录)',
+        function()
+          if vim.fn.executable('yazi') == 1 then
+            vim.cmd('Yazi')
+          else
+            -- 没有 yazi 就退回 nvim 自带浏览器(netrw 因为上面那个判断仍然启用着),
+            -- 至少能浏览目录,而不是按了没反应
+            vim.notify(
+              'snakenvim:未找到 yazi,退回内置文件浏览器。安装:scoop install yazi / brew install yazi',
+              vim.log.levels.WARN
+            )
+            vim.cmd('Explore')
+          end
+        end,
+        desc = '文件管理:yazi(缺失时退回内置浏览器)',
       },
     },
     opts = {
       -- 接管 `nvim <目录>`:直接开 yazi,而不是留一个空缓冲区或走 netrw。
+      -- **但只在 yazi 真的存在时才接管** —— 否则目录会变得完全打不开。
       -- 配套必须在 init 里设 loaded_netrwPlugin(见下),否则 netrw 会抢先。
-      open_for_directories = true,
+      open_for_directories = has_yazi,
 
       keymaps = {
         show_help = '<f1>', -- yazi 窗口里按 F1 看键位表
@@ -69,7 +88,12 @@ return {
       -- 让它彻底不参与目录缓冲区,避免和 yazi 抢。
       -- lazy.nvim 的 init 在插件加载前就执行,所以这个标记来得及生效。
       -- (config/lazy.lua 里那段「netrw 故意保留」的注释已同步改写)
-      vim.g.loaded_netrwPlugin = 1
+      --
+      -- 同样必须加 yazi 存在这个条件:netrw 一旦被标记为已加载就再也回不来,
+      -- 而 yazi 不在时它就是唯一的目录浏览手段。
+      if vim.fn.executable('yazi') == 1 then
+        vim.g.loaded_netrwPlugin = 1
+      end
     end,
   },
 }

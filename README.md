@@ -149,6 +149,12 @@ gcc main.c -o main && ./main
 | `<Space>E` | nvim-tree:在树里定位当前文件 | **已删除** —— yazi 不是树,没有对等物 |
 
 **`nvim <目录>` 现在直接开 yazi**(取代 netrw),所以 `nvim .` 就能浏览当前目录。
+
+> **只在 yazi 装了的时候才接管。** 没装 yazi 时 netrw 会被保留,目录照常能浏览
+> (`<Space>e` 也会退回内置浏览器并提示怎么装)。
+> 这个判断是必须的:yazi 接管目录的方式是**把 netrw 关掉**,如果 yazi 又不在,
+> 结果就是 `nvim <目录>` 只得到一个空缓冲区、连目录都打不开 —— mac 上装了、
+> Windows 上没装时就会撞上。
 这条靠 `open_for_directories`;实现细节、以及「为什么它的懒加载不能用 `cmd` 而
 必须用 `event`」写在 `lua/plugins/explorer.lua` 顶部注释里。
 
@@ -207,7 +213,7 @@ gcc main.c -o main && ./main
 |---|---|
 | `<Space>ut` | **切换主题**(带实时预览,选择会被记住) |
 | `<Space>ui` | 图标 / ASCII 切换 |
-| `<Space>uo` | mosh 卡顿优化开关 |
+| `<Space>uo` | 远程卡顿优化开关 |
 
 #### 几个纯视觉增强
 
@@ -368,7 +374,7 @@ LSP 安装清单、解析器清单、格式化器清单、缩进规则四件事�
 
 配置会自动检测 mosh / ssh 会话,并**只改变一件事**:
 
-**剪贴板改走 OSC52。** 因为通过 mosh 操作 mac 上的 nvim 时,`y` 会把内容送进
+**剪贴板改走 OSC52。** 因为通过 SSH / mosh 操作 mac 上的 nvim 时,`y` 会把内容送进
 **mac 的剪贴板**,而你眼前是 iPad —— 粘贴时什么都得不到。走 OSC52 则顺 mosh
 通道把内容回传给 iPad 终端。
 
@@ -376,7 +382,7 @@ LSP 安装清单、解析器清单、格式化器清单、缩进规则四件事�
 
 ### 如果 iPad 上操作发涩
 
-按 `<Space>uo` 打开 mosh 卡顿优化。它会关掉这几个「光标一动就重绘」的东西:
+按 `<Space>uo` 打开 远程卡顿优化。它会关掉这几个「光标一动就重绘」的东西:
 
 - `cursorline` — 每次移动整行重绘
 - **缩进线**(indent-blankline)— 每次移动重绘缩进指示线
