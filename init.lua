@@ -5,6 +5,12 @@
 
 vim.g.snake_nvim = true
 
+-- leader 必须在 lazy.setup 之前设好:keymaps 和插件定义里的 <leader> 都依赖它,
+-- 缺了这行会静默退回默认的反斜杠,整套 <Space> 键位方案全部失效。
+-- 也可以改成逗号之类的:改这里一处即可,其它文件都写 <leader> 不写死按键。
+vim.g.mapleader = ' '
+vim.g.maplocalleader = ' '
+
 require('config.profile') -- 纯探测,无副作用。必须最先,后面所有文件都读它
 require('config.options') -- 选项必须在插件加载前设好,否则插件读到的是默认值
 require('config.lazy')    -- lazy.nvim 自举并加载插件
