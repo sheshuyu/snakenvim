@@ -15,13 +15,13 @@ Win11 上用 Windows Terminal、macOS 上也可能被 iPad 通过 mosh 远程使
 **Windows**
 
 ```powershell
-git clone <仓库地址> "$env:LOCALAPPDATA\nvim"
+git clone https://github.com/sheshuyu/snakenvim.git "$env:LOCALAPPDATA\nvim"
 ```
 
 **macOS**
 
 ```bash
-git clone <仓库地址> ~/.config/nvim
+git clone https://github.com/sheshuyu/snakenvim.git ~/.config/nvim
 ```
 
 然后直接开 `nvim`,首次启动会自动完成:
