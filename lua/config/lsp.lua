@@ -63,6 +63,11 @@ vim.api.nvim_create_autocmd('LspAttach', {
       vim.lsp.buf.format({ async = true })
     end, 'LSP:格式化(LSP 内置)')
 
+    -- LazyVim / AstroNvim 习惯的别名,方便肌肉记忆
+    map('n', '<leader>cr', vim.lsp.buf.rename, 'LSP:重命名符号')
+    map({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, 'LSP:代码操作')
+    map('n', '<leader>cl', '<cmd>checkhealth vim.lsp<CR>', 'LSP:查看客户端状态')
+
     -- 高亮当前符号的所有引用,光标停一会自动出现
     if client:supports_method('textDocument/documentHighlight', bufnr) then
       local group = vim.api.nvim_create_augroup('snake_lsp_highlight_' .. bufnr, { clear = true })

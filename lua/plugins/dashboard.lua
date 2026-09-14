@@ -4,14 +4,17 @@
 -- 正好对应「一段 ASCII header + 几个入口」的需求,不夹带文件浏览器之类的
 -- 重复功能(找文件我们已经有 telescope 了)。
 --
--- 四个容易踩的坑(都踩过了):
+-- 五个容易踩的坑(都踩过了):
 --   1. 没有 type = 'header' 这种东西 —— header 就是 type = 'text'
 --      ('header' 是 dashboard-nvim 的写法,混用会直接报
 --       "attempt to call a nil value")
 --   2. 按钮的 opts.shortcut 只负责显示,不会绑按键,必须另外给 opts.keymap
---   3. 按钮的 val 里不要再写一遍快捷键字母,alpha 会自动把 shortcut 拼在前面
+--   3. opts.shortcut 会被自动拼在 val 前面。想要完全掌控整行内容,
+--      就把 shortcut 留空、自己拼进 val 里
 --   4. alpha 的 opts.spacing 是「每个元素后面都补空行」而不是「元素之间」,
 --      按钮组高度是 n*(1+spacing)
+--   5. hl 的起止位置是直接交给 nvim_buf_add_highlight 的,那个 API 按**字节**
+--      算,而我们的行里有 ▸ ┈ 和中文 —— 必须做字符到字节的换算,否则颜色串位
 --
 -- 布局每次按窗口大小现算,不是写死的:alpha 原生只从上往下排、不垂直居中,
 -- 所以窗口一大内容就全挤在顶部、下面空一大片。
@@ -22,14 +25,18 @@
 -- nil = 按窗口宽度自动挑
 local FORCE_HEADER = nil
 
--- 是否随窗口自适应(垂直居中、按宽度选字样、按高度决定要不要装饰)
+-- 是否随窗口自适应(垂直居中、按宽度选字样、按高度决定要不要页脚)
 local ADAPTIVE = true
+
+-- 菜单每行的显示宽度。引导线把每行拉满,菜单才成为一个有分量的块,
+-- 而不是五根飘在巨大 header 下面的小字。
+local MENU_MIN_WIDTH = 40
+local MENU_MAX_WIDTH = 60
 
 -- ── ASCII 字体 ──────────────────────────────────────────────────────────
 
 -- ANSI Shadow:█ 做填充,╔╗╚╝═║ 做棱边和投影,立体感来自字形本身。
--- 两侧的 ║ ╗ ╚ 就是「投影」,所以看起来有厚度。
--- 宽度 83 列 —— 别试图整数放大它:╔╗ 这类角字符一拉伸就散架了
+-- 宽度 83 列 —— 别试图整数放大它:╔╗ 这类角字符一拉伸就散架
 -- (不像 █ 可以精确复制),所以它只用原始尺寸。
 local SHADOW_FONT = {
   S = { '███████╗', '██╔════╝', '███████╗', '╚════██║', '███████║', '╚══════╝' },
@@ -42,8 +49,8 @@ local SHADOW_FONT = {
   M = { '███╗   ███╗', '████╗ ████║', '██╔████╔██║', '██║╚██╔╝██║', '██║ ╚═╝ ██║', '╚═╝     ╚═╝' },
 }
 
--- 块体,5 行,窄窗口用。字少笔画细,所以不给它加投影 ——
--- 投影会填进字母内部的空隙,看起来像噪点(试过,很丑)。
+-- 块体,5 行,窄窗口用。笔画细、内部空隙多,所以不给它加投影 ——
+-- 投影字符会填进字母的空隙里,看起来像噪点(试过,很丑)。
 local BLOCK_FONT = {
   S = { '█████', '█    ', '█████', '    █', '█████' },
   N = { '█   █', '██  █', '█ █ █', '█  ██', '█   █' },
@@ -67,10 +74,6 @@ local function char_count(s)
   return vim.fn.strchars(s)
 end
 
-local function char_at(s, i)
-  return vim.fn.strcharpart(s, i, 1)
-end
-
 --- 取一个字母的字形,并把每行补齐到该字母最宽的那一行。
 -- 字形表是手写的,某行多一个少一个空格很容易发生 —— 补一次宽度,
 -- 整幅画就不会因此错位。
@@ -92,7 +95,6 @@ end
 
 --- 把文字渲染成字符画,再把所有行补齐到统一宽度
 local function render(word, font)
-  -- 字体高度 = 任意字形的行数(取最大值以防某个字形多一行)
   local height = 0
   for _, g in pairs(font) do
     height = math.max(height, #g)
@@ -131,29 +133,6 @@ local HEADERS = {
   block = render(WORD, BLOCK_FONT),
 }
 
---- 拼一条铺满窗口宽度的装饰线:左右放角饰,中间用 unit 周期重复填满。
--- 结尾不足一个周期的部分,用 unit 的前几个字符补上(而不是空格),
--- 这样图案是连续到右角饰的,不会留一道缝。
-local function band_line(win_w, left, unit, right)
-  local lw, uw, rw = width(left), width(unit), width(right)
-  local fill = win_w - lw - rw
-  if fill <= 0 then
-    return left .. right
-  end
-
-  local n = math.floor(fill / uw)
-  local used = n * uw
-  local rem = fill - used
-
-  local tail = ''
-  if rem > 0 then
-    -- unit 里每个字符都是单列宽,所以取前 rem 个字符正好补满
-    tail = vim.fn.strcharpart(unit, 0, rem)
-  end
-
-  return left .. unit:rep(n) .. tail .. right
-end
-
 -- ── 颜色 ────────────────────────────────────────────────────────────────
 
 local function blend(c1, c2, t)
@@ -166,25 +145,22 @@ local function blend(c1, c2, t)
   return r * 65536 + g * 256 + b
 end
 
---- 从主题里取两个颜色作为渐变的端点。取不到就返回 nil,调用方走 link 回退。
+--- 从主题里取颜色。取不到就返回 nil,调用方走 link 回退。
 local function theme_colors()
   local function fg_of(name)
     local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = name })
     return ok and hl and hl.fg or nil
   end
   local bright = fg_of('Title') or fg_of('Function') or fg_of('Special')
-  local accent = fg_of('Function') or fg_of('String') or fg_of('Number')
-  local dim = fg_of('Comment') or fg_of('NonText')
   local normal = vim.api.nvim_get_hl(0, { name = 'Normal' })
-  local bg = normal.bg or 0x000000
   if not bright then
     return nil
   end
-  return { bright = bright, accent = accent or bright, dim = dim or accent or bright, bg = bg }
+  return { bright = bright, bg = normal.bg or 0x000000 }
 end
 
 --- 给多行字符画生成「自上而下由亮到暗」的渐变高亮。
--- 每行一个高亮组,alpha 的 hl 支持按行、按列分段。
+-- 每行一个高亮组;alpha 的 hl 支持按行、按列分段。
 local function gradient_hl(n_rows, colors)
   if not colors then
     return 'SnakeDashboardHeader'
@@ -200,31 +176,45 @@ local function gradient_hl(n_rows, colors)
   return hl
 end
 
---- 给单行装饰带生成「横向渐变」高亮(左右两端各取一个主题色)
-local function band_hl(line, colors, segments)
-  if not colors then
-    return 'SnakeDashboardBand'
-  end
-  local n = char_count(line)
-  local seg_w = math.max(1, math.ceil(n / segments))
-  local hl = {}
-  for i = 0, segments - 1 do
-    local start = i * seg_w
-    if start < n then
-      local t = i / math.max(1, segments - 1)
-      local name = ('SnakeDashboardBand%d'):format(i)
-      vim.api.nvim_set_hl(0, name, { fg = blend(colors.accent, colors.dim, t) })
-      hl[#hl + 1] = { name, start, math.min(start + seg_w, n) }
-    end
-  end
-  return { hl }
+--- 构造一个高亮分段。start/end 是**字符下标**,这里换算成字节偏移 ——
+-- alpha 把它们直接交给 nvim_buf_add_highlight,那是按字节算的,
+-- 而行里有 ▸ ┈ 和中文,不换算颜色会串位。
+local function seg(line, group, c_start, c_end)
+  return {
+    group,
+    #vim.fn.strcharpart(line, 0, c_start),
+    c_end < 0 and -1 or #vim.fn.strcharpart(line, 0, c_end),
+  }
 end
 
--- ── 入口 ────────────────────────────────────────────────────────────────
--- 每项是 { 标签, 快捷键, 动作 }。标签**不要**带快捷键字母。
+-- ── 菜单 ────────────────────────────────────────────────────────────────
+
+--- 拼一行菜单:▸ 标签 ┈┈┈┈┈┈ 快捷键
+-- 引导线把每行拉满,菜单整体成为一个有分量的块,而不是几根飘在巨大
+-- header 下面的小字。返回行内容和它的高亮分段。
+local function menu_row(label, shortcut, total_w)
+  local left = '▸  ' .. label
+  local lw = width(left)
+  local sw = width(shortcut)
+  local dots = total_w - lw - sw - 2
+  if dots < 2 then
+    dots = 2
+  end
+
+  local line = left .. ' ' .. string.rep('┈', dots) .. ' ' .. shortcut
+  local dot_start = lw + 1
+
+  return line, {
+    seg(line, 'SnakeDashboardButton', 0, lw),
+    seg(line, 'SnakeDashboardLeader', dot_start, dot_start + dots),
+    seg(line, 'SnakeDashboardShortcut', dot_start + dots + 1, -1),
+  }
+end
+
+-- 每项是 { 标签, 快捷键, 动作 }。标签不要带前缀符号,menu_row 会加。
 local ENTRIES = {
   {
-    ' 新建文件',
+    '新建文件',
     'n',
     function()
       vim.ui.input({ prompt = '新文件路径: ', completion = 'file' }, function(input)
@@ -235,14 +225,14 @@ local ENTRIES = {
     end,
   },
   {
-    ' 查找文件',
+    '查找文件',
     'f',
     function()
       require('telescope.builtin').find_files()
     end,
   },
   {
-    ' 最近打开的文件',
+    '最近打开的文件',
     'r',
     function()
       require('telescope.builtin').oldfiles()
@@ -252,27 +242,20 @@ local ENTRIES = {
     -- 用 :Oil 而不是 require('oil'):oil 是懒加载的,直接 require 会因为
     -- 模块还不在 runtimepath 上而失败。:Oil 命令由 lazy 在加载插件时创建,
     -- 调用它会自动触发加载。
-    ' 打开配置目录',
+    '打开配置目录',
     'c',
     function()
       vim.cmd('Oil ' .. vim.fn.fnameescape(vim.fn.stdpath('config')))
     end,
   },
   {
-    ' 退出',
+    '退出',
     'q',
     function()
       vim.cmd.quit()
     end,
   },
 }
-
--- 让所有按钮等宽,文字就会左对齐成一列,而不是每行各自居中显得参差
-local BUTTON_WIDTH = 0
-for _, e in ipairs(ENTRIES) do
-  BUTTON_WIDTH = math.max(BUTTON_WIDTH, width(e[1]) + #e[2])
-end
-BUTTON_WIDTH = BUTTON_WIDTH + 4
 
 --- 按窗口宽度挑字样
 local function pick_header(win_w)
@@ -298,6 +281,12 @@ local function pick_header(win_w)
   return { "snake's neovim" }
 end
 
+--- 菜单宽度:跟着 header 走,让两者的宽度比例看起来是刻意设计的
+local function menu_width(win_w, header_w)
+  local w = math.max(MENU_MIN_WIDTH, math.min(header_w - 6, MENU_MAX_WIDTH))
+  return math.min(w, win_w - 4)
+end
+
 --- 按当前窗口大小现算一份布局
 --
 -- 垂直居中交给 alpha 自己的 group + position='v_center':它拿的是真实窗口
@@ -308,31 +297,26 @@ local function build_layout()
 
   local header = pick_header(win_w)
   local colors = theme_colors()
+  local mw = menu_width(win_w, width(header[1]))
   local spacing = 1
 
-  local buttons = {
-    type = 'group',
-    val = vim.tbl_map(function(e)
-      return {
-        type = 'button',
-        val = e[1],
-        on_press = e[3],
-        opts = {
-          shortcut = e[2],
-          -- shortcut 只负责「显示」,不绑按键 —— 必须另外给 keymap。
-          -- 不写的话只有把光标移到按钮行上按回车才触发,直接按 n/f/r 没反应。
-          -- alpha 会把这条 keymap 改成缓冲区局部,不会泄漏到别的缓冲区。
-          keymap = { 'n', e[2], e[3], { noremap = true, silent = true, nowait = true } },
-          position = 'center',
-          cursor = 1,
-          width = BUTTON_WIDTH,
-          hl = 'SnakeDashboardButton',
-          hl_shortcut = 'SnakeDashboardShortcut',
-        },
-      }
-    end, ENTRIES),
-    opts = { spacing = spacing },
-  }
+  local rows = vim.tbl_map(function(e)
+    local line, hl = menu_row(e[1], e[2], mw)
+    return {
+      type = 'button',
+      val = line,
+      on_press = e[3],
+      opts = {
+        -- 不给 shortcut:整行内容已经自己拼好了,让 alpha 再拼一次会重复
+        keymap = { 'n', e[2], e[3], { noremap = true, silent = true, nowait = true } },
+        position = 'center',
+        cursor = 0,
+        hl = hl,
+      },
+    }
+  end, ENTRIES)
+
+  local menu = { type = 'group', val = rows, opts = { spacing = spacing } }
 
   local content = {
     {
@@ -341,49 +325,22 @@ local function build_layout()
       val = header,
       opts = { position = 'center', hl = gradient_hl(#header, colors) },
     },
-    { type = 'padding', val = 2 },
-    buttons,
+    { type = 'padding', val = 3 },
+    menu,
   }
 
-  -- 高度预算:装饰是可选项,窗口放不下就先砍装饰再砍页脚,
-  -- 而不是让它们被 alpha 挤出屏幕(它的 v_center 只把偏移量夹到 0)
+  -- 高度预算:页脚是可选项,窗口放不下就不放,
+  -- 而不是让它被 alpha 挤出屏幕(它的 v_center 只把偏移量夹到 0)
   local header_h = #header
   local buttons_h = #ENTRIES * (1 + spacing)
-  local body_h = header_h + 2 + buttons_h
+  local want_footer = header_h + 3 + buttons_h + 2 + 2
 
-  local want_footer = body_h + 1 + 2
-  local want_bands = want_footer + 2 + 2 -- 上下各:装饰线 + 一行留白
-
-  local with_footer = win_h >= want_footer
-  local with_bands = win_h >= want_bands
-
-  if with_footer then
-    content[#content + 1] = { type = 'padding', val = 1 }
+  if win_h >= want_footer then
+    content[#content + 1] = { type = 'padding', val = 2 }
     content[#content + 1] = {
       type = 'text',
       val = { "snake's neovim", '按 <Space> 查看所有键位' },
       opts = { position = 'center', hl = 'SnakeDashboardFooter' },
-    }
-  end
-
-  if with_bands then
-    -- 上:四角 + 渐变带;下:四角 + 波浪线
-    -- 左右角饰用 ╭╮╰╯,和 ANSI Shadow 字样的棱边风格一致
-    local top = band_line(win_w, '╭─', '░▒▓█▓▒', '─╮')
-    local bottom = band_line(win_w, '╰─', '▁▂▃▄▅▆▇█▇▆▅▄▃▂', '─╯')
-
-    table.insert(content, 1, { type = 'padding', val = 1 })
-    table.insert(content, 1, {
-      type = 'text',
-      val = { top },
-      opts = { position = 'center', hl = band_hl(top, colors, 8) },
-    })
-
-    content[#content + 1] = { type = 'padding', val = 1 }
-    content[#content + 1] = {
-      type = 'text',
-      val = { bottom },
-      opts = { position = 'center', hl = band_hl(bottom, colors, 8) },
     }
   end
 
@@ -417,12 +374,12 @@ return {
     end,
     lazy = false,
     config = function()
-      -- 静态高亮:这些不随主题变,用 link 跟随配色即可
+      -- 静态高亮:不随主题变,用 link 跟随配色即可
       vim.api.nvim_set_hl(0, 'SnakeDashboardButton', { link = 'Normal' })
+      vim.api.nvim_set_hl(0, 'SnakeDashboardLeader', { link = 'Comment' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardShortcut', { link = 'Special' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardFooter', { link = 'Comment' })
       vim.api.nvim_set_hl(0, 'SnakeDashboardHeader', { link = 'Title' })
-      vim.api.nvim_set_hl(0, 'SnakeDashboardBand', { link = 'Comment' })
       -- 选中行:整行铺一层底色,像 telescope / fzf 的选中行
       vim.api.nvim_set_hl(0, 'SnakeDashboardSelected', { link = 'Visual' })
 
@@ -432,9 +389,21 @@ return {
       local conf = build_layout()
       local aug = vim.api.nvim_create_augroup('snake_dashboard', { clear = true })
 
+      --- 重算布局并重绘(窗口变化、换主题时用)
+      local function relayout()
+        if vim.bo.filetype ~= 'alpha' then
+          return
+        end
+        conf.layout = build_layout().layout
+        pcall(require('alpha').redraw)
+      end
+
       -- 必须在 alpha.setup() 之前注册:autocmd 按注册顺序执行,
       -- 这样我们的回调先跑(按最终窗口尺寸重算布局),alpha 自己的
       -- VimEnter 回调随后才渲染,拿到的就是算好的布局。
+      --
+      -- 顺带说明:渐变颜色是从配色方案里取的,而插件配置阶段还没应用主题,
+      -- 那次算出来的颜色是错的 —— 靠这次 VimEnter 的重算覆盖掉。
       vim.api.nvim_create_autocmd('VimEnter', {
         group = aug,
         callback = function()
@@ -446,30 +415,8 @@ return {
       -- 这里刻意不重新调用 alpha.setup():它内部会重建 VimEnter autocmd
       -- 和三个用户命令,反复调用没必要。直接改 default_config 里那份
       -- layout 再 redraw 就够了(redraw 读的就是这个表)。
-      vim.api.nvim_create_autocmd('VimResized', {
-        group = aug,
-        callback = function()
-          if vim.bo.filetype ~= 'alpha' then
-            return
-          end
-          conf.layout = build_layout().layout
-          pcall(require('alpha').redraw)
-        end,
-      })
-
-      -- 渐变颜色是从当前配色方案里取的,换主题要重新算一遍并重绘。
-      -- (VimEnter 时会重算一次,所以启动时拿到的一定是应用主题之后的颜色 ——
-      --  插件配置阶段算的那次早于主题应用,颜色是错的,但会被这次覆盖掉。)
-      vim.api.nvim_create_autocmd('ColorScheme', {
-        group = aug,
-        callback = function()
-          if vim.bo.filetype ~= 'alpha' then
-            return
-          end
-          conf.layout = build_layout().layout
-          pcall(require('alpha').redraw)
-        end,
-      })
+      vim.api.nvim_create_autocmd('VimResized', { group = aug, callback = relayout })
+      vim.api.nvim_create_autocmd('ColorScheme', { group = aug, callback = relayout })
 
       -- alpha 把行号、符号列、cursorline 都关掉了,但 laststatus 是
       -- **全局**选项它管不了。我们在 options.lua 设了全局状态栏
@@ -499,9 +446,9 @@ return {
             return
           end
           vim.o.laststatus = 3
-          -- winhighlight 是**窗口局部**的,而 alpha 用的就是后面显示文件的那个
-          -- 窗口。不还原的话 'CursorLine:SnakeDashboardSelected' 会一直跟着走,
-          -- 让普通缓冲区里所有匹配括号之类的高亮都变样。
+          -- winhighlight 是**窗口局部**的,而 alpha 用的就是后面显示文件的
+          -- 那个窗口。不还原的话 'CursorLine:SnakeDashboardSelected' 会一直
+          -- 跟着走,让普通缓冲区里的高亮都变样。
           if vim.wo.winhighlight == 'CursorLine:SnakeDashboardSelected' then
             vim.wo.winhighlight = ''
           end

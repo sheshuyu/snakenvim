@@ -81,6 +81,8 @@ return {
         { '<leader>f', group = '查找' },
         { '<leader>g', group = 'Git' },
         { '<leader>l', group = 'LSP' },
+        { '<leader>s', group = '搜索' },
+        { '<leader>t', group = '终端' },
         { '<leader>u', group = '界面' },
         { '<leader>w', group = '窗口 / 文件' },
         { '<leader>x', group = '列表' },
