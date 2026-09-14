@@ -46,7 +46,8 @@ local function external_tools()
     {
       bin = 'tree-sitter',
       why = 'treesitter 安装 cpp / python 语法解析器(缺了就没有对应高亮)',
-      install = { win = 'scoop install tree-sitter', mac = 'brew install tree-sitter' },
+      -- mac 上要装的是 tree-sitter-cli:brew 的 tree-sitter 只有库,没有可执行文件
+      install = { win = 'scoop install tree-sitter', mac = 'brew install tree-sitter-cli' },
       required = false,
     },
     {

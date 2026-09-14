@@ -56,7 +56,8 @@ return {
               '其余功能一切正常,C 和 Lua 用的是 nvim 自带解析器,不受影响。',
               '安装后重启即可自动补上:',
               '  Windows:  scoop install tree-sitter',
-              '  macOS:    brew install tree-sitter',
+              '  macOS:    brew install tree-sitter-cli',
+              '            (注意:brew 的 tree-sitter 只装库,不带 CLI,必须装 -cli)',
               '详细状态::checkhealth snakenvim',
             }, '\n'),
             vim.log.levels.WARN

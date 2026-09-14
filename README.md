@@ -40,13 +40,17 @@ git clone <仓库地址> ~/.config/nvim
 | 工具 | 用途 | Windows | macOS |
 |---|---|---|---|
 | **git** | 下载插件 | [下载安装](https://git-scm.com/) | `brew install git` |
-| **tree-sitter-cli** | 编译 cpp / python 语法解析器 | `scoop install tree-sitter` | `brew install tree-sitter` |
+| **tree-sitter-cli** | 编译 cpp / python 语法解析器 | `scoop install tree-sitter` | `brew install tree-sitter-cli` |
 | **C 编译器** | 同上 | 通常已有(gcc/clang) | Xcode 命令行工具 |
 | ripgrep | 全文搜索 | `scoop install ripgrep` | `brew install ripgrep` |
 | fd | 文件查找 | `scoop install fd` | `brew install fd` |
 
 **缺失不会导致 nvim 起不来。** 少了 `tree-sitter-cli` 时 cpp / python 会自动退回
 内置的正则高亮并给出提示,C 和 Lua 用的是 nvim 自带解析器,不受影响。
+
+> macOS 注意:Homebrew 的 `tree-sitter` 公式**只装 libtree-sitter 库,不带命令行工具**。
+> 装完仍然会提示找不到 `tree-sitter` 就是这个原因 —— 要装的是 `tree-sitter-cli`
+> (`brew uninstall tree-sitter` 可以顺手把那个用不上的库删掉)。
 
 随时用 `:checkhealth snakenvim` 查看缺什么、怎么装,或 `:Snakenvim` 看一行行状态速查。
 
