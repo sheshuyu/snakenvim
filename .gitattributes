@@ -1,0 +1,8 @@
+# 两台机器(Windows / macOS)共用同一个仓库,行尾必须统一。
+# 不加这行的话,Windows 上 git 可能把 lua 文件写成 CRLF,同步到 mac 后出现整文件 diff。
+* text=auto eol=lf
+
+# 明确按二进制处理,避免 git 尝试转换
+*.png binary
+*.jpg binary
+*.ico binary
