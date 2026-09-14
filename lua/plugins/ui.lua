@@ -1,7 +1,11 @@
--- snakenvim — 状态栏与键位提示
+-- snakenvim — 状态栏、缩进线与键位提示
+--
+-- 全部是**纯视觉元素**,所以都归在这个文件。
 --
 -- 状态栏刻意**不使用任何图标字母**:诊断用 E/W/I/H 文字、分隔符留空。
--- 这样无论终端字体是否装了 Nerd Font,状态栏都不会出现豆腐块。
+-- 缩进线用的是 `│`(U+2502,制表符区的方块绘制字符),不用 Nerd Font 私有区。
+-- 这样无论终端字体是否装了 Nerd Font,都不会出现豆腐块(参见 config/theme.lua
+-- 里图标档位用的是同一套思路)。
 
 return {
   {
@@ -31,7 +35,9 @@ return {
           component_separators = { left = '', right = '' },
           section_separators = { left = '', right = '' },
           disabled_filetypes = {
-            statusline = { 'oil', 'checkhealth', 'lazy' },
+            -- yazi 是独立 TUI 窗口(filetype 就叫 yazi),底下再压一条状态栏
+            -- 只是浪费一行;checkhealth / lazy 也是同理。
+            statusline = { 'yazi', 'checkhealth', 'lazy' },
           },
         },
         sections = {
@@ -63,6 +69,63 @@ return {
           },
           lualine_y = { 'filetype' },
           lualine_z = { 'location' },
+        },
+      }
+    end,
+  },
+
+  -- ── indent-blankline:彩虹缩进线 ───────────────────────────────────────
+  -- 取代了之前的 mini.indentscope —— 两者都在同一列画竖线,留着会叠在一起。
+  --
+  -- 【彩虹是它原生支持的,不用另装插件】
+  -- 只要给 indent.highlight 一串色组名,再用 HIGHLIGHT_SETUP 钩子把色组定义出来。
+  -- 网上流传的 indent-rainbowline.nvim 只是帮你拼这份配置,而它 43 星、两年没
+  -- 更新,没必要为这点事多一个依赖。
+  --
+  -- 【颜色取自 One Dark 官方调色板】
+  -- 和新加的 onedarkpro 主题同源,切到那套主题时缩进线依然协调。
+  -- 色组必须注册在 HIGHLIGHT_SETUP 钩子里 —— 这样每次换配色方案都会重设一遍,
+  -- 否则切完主题色组会丢,缩进线全变成同一个颜色。
+  {
+    'lukas-reineke/indent-blankline.nvim',
+    -- 上游要求显式指 main:插件仓库名和模块名不一致(模块叫 ibl)
+    main = 'ibl',
+    event = { 'BufReadPre', 'BufNewFile' },
+    opts = function()
+      local hooks = require('ibl.hooks')
+      local rainbow = {
+        'SnakenvimRainbowRed',
+        'SnakenvimRainbowYellow',
+        'SnakenvimRainbowBlue',
+        'SnakenvimRainbowOrange',
+        'SnakenvimRainbowGreen',
+        'SnakenvimRainbowViolet',
+        'SnakenvimRainbowCyan',
+      }
+      hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
+        vim.api.nvim_set_hl(0, 'SnakenvimRainbowRed', { fg = '#E06C75' })
+        vim.api.nvim_set_hl(0, 'SnakenvimRainbowYellow', { fg = '#E5C07B' })
+        vim.api.nvim_set_hl(0, 'SnakenvimRainbowBlue', { fg = '#61AFEF' })
+        vim.api.nvim_set_hl(0, 'SnakenvimRainbowOrange', { fg = '#D19A66' })
+        vim.api.nvim_set_hl(0, 'SnakenvimRainbowGreen', { fg = '#98C379' })
+        vim.api.nvim_set_hl(0, 'SnakenvimRainbowViolet', { fg = '#C678DD' })
+        vim.api.nvim_set_hl(0, 'SnakenvimRainbowCyan', { fg = '#56B6C2' })
+      end)
+
+      return {
+        -- mosh 卡顿优化开着时不启用。运行时切换在 config/theme.lua 的
+        -- apply_mosh_opts 里做 —— 那边用的是 require('ibl').update(),
+        -- 只改 enabled 不碰这里的彩虹配色(用 setup 会把下面这组色重置掉)。
+        enabled = not vim.g.snakenvim_mosh_opts,
+        indent = {
+          char = '│',
+          highlight = rainbow,
+        },
+        scope = {
+          enabled = true, -- 顶上 mini.indentscope 留下的作用域线,由它接管
+          -- 上下划线标记关掉:它们依赖字体里行内下划线的位置,终端里经常是歪的
+          show_start = false,
+          show_end = false,
         },
       }
     end,

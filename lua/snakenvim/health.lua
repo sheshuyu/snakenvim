@@ -44,6 +44,22 @@ local function external_tools()
       required = false,
     },
     {
+      bin = 'yazi',
+      why = 'nvim 里的文件管理(<Space>e),也接管 nvim <目录>。缺了之后打开目录只会得一个空缓冲区',
+      install = { win = 'scoop install yazi', mac = 'brew install yazi' },
+      required = false,
+    },
+    {
+      bin = 'lazygit',
+      why = 'nvim 里的完整 git 界面(<Space>gg)。缺了会自动退回终端 git',
+      -- lazygit 不在 scoop 主桶里,必须先从 extras 桶装,否则 scoop 会报找不到包
+      install = {
+        win = 'scoop bucket add extras; scoop install lazygit',
+        mac = 'brew install lazygit',
+      },
+      required = false,
+    },
+    {
       bin = 'tree-sitter',
       why = 'treesitter 安装 cpp / python 语法解析器(缺了就没有对应高亮)',
       -- mac 上要装的是 tree-sitter-cli:brew 的 tree-sitter 只有库,没有可执行文件

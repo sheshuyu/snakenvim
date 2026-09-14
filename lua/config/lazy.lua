@@ -57,8 +57,13 @@ require('lazy').setup({
 
   performance = {
     rtp = {
-      -- 只关掉确定用不到的。netrw 故意保留:它负责 nvim <目录> 的兜底行为,
-      -- 关掉之后打开目录会得到一个空缓冲区。
+      -- 只关掉确定用不到的。
+      --
+      -- netrw 依然不列进这份名单,但它的角色变了。以前留着它是为了给
+      -- `nvim <目录>` 一个兜底行为;现在这件事交给 yazi 了 ——
+      -- 见 plugins/explorer.lua 的 open_for_directories,那边的 init 会设
+      -- vim.g.loaded_netrwPlugin = 1 把 netrw 顶掉。上游推荐的也是这个变量,
+      -- 而不是从 runtimepath 里摘掉它,所以这里跟着官方走。
       disabled_plugins = { 'gzip', 'tar', 'tohtml' },
     },
   },

@@ -3,8 +3,11 @@
 -- 不装插件:浮动窗口 + 一个常驻的终端缓冲区,几十行就够,
 -- 而且行为完全可控(插件多数是包一层 GUI,反而不好调)。
 --
--- 用法:<Space>tt 开关。终端里按 <Esc><Esc>(或 <C-\><C-n>)回普通模式,
--- 再按一次 <Space>tt 收起。收起来不会杀掉进程,下次打开还是原来的会话。
+-- 用法:<Space>tt 开关。收起浮窗有三条路:
+--   * 终端里直接按 <C-q>            —— 一步,最快
+--   * <Esc><Esc> 回普通模式再按 q    —— 和 help / quickfix 窗口的习惯一致
+--   * 再按一次 <Space>tt
+-- 收起来不会杀掉进程,下次打开还是原来的会话。
 
 local M = {}
 
@@ -93,6 +96,16 @@ function M.toggle()
 
   local buf = has_terminal()
   if buf then
+    -- ⚠️ 必须在打开浮窗【之前】算当前文件在哪,顺序不能挪。
+    --
+    -- 下面 nvim_open_win 的第二个参数是 true,意思是「进入这个窗口」——
+    -- 当前缓冲区随即变成终端缓冲区。那时再调 target_dir(),读到的名字是
+    -- term://...,fnamemodify 出来是 "term://…/bin" 这种不是目录的东西,
+    -- isdirectory 判定失败,于是退回 vim.uv.cwd()。
+    -- 结果就是提示里的「当前文件在 X」显示成 nvim 的工作目录,而不是你的
+    -- 文件真正在哪 —— 而且只要 cwd 和终端目录不同就会误报。
+    local want = target_dir()
+
     -- 复用已有的终端会话,不重新起(里面跑的东西还在)
     state.win = vim.api.nvim_open_win(buf, true, {
       relative = 'editor',
@@ -107,10 +120,12 @@ function M.toggle()
     -- 复用时目录不会自动跟着当前文件走 —— 故意的:往里发 cd 命令有风险,
     -- 如果 shell 里正有个程序在等输入,那串 cd 会被当成它的输入吃掉。
     -- 所以只在目录不一致时提示一句,想换目录用 <Space>tT 重开。
-    local want = target_dir()
     if state.dir and want ~= state.dir then
+      -- 写成一行纯粹是为了清爽。补充说明:以前这里还怕多行会触发
+      -- "Press ENTER or type command to continue"(命令行区域放不下多行),
+      -- 现在通知已经走 mini.notify 的浮窗(见 plugins/editor.lua),那个限制没有了。
       vim.notify(
-        ("snakenvim:终端还停在 %s\n当前文件在 %s —— 按 <Space>tT 在新目录重开"):format(
+        ("snakenvim:终端停在 %s,当前文件在 %s —— 按 <Space>tT 重开"):format(
           vim.fn.fnamemodify(state.dir, ':t'),
           vim.fn.fnamemodify(want, ':t')
         ),
@@ -139,6 +154,22 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = 'snakenvim_term',
   callback = function(args)
     vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { buf = args.buf, desc = '终端:回普通模式' })
+
+    -- 终端模式下一步收起,不用先 <Esc><Esc> 再按 q。
+    --
+    -- 为什么选 <C-q>:它原本是终端的 XON 流控(<C-s> 暂停输出、<C-q> 恢复),
+    -- 日常几乎用不到,nvim 先截走就等于接管了它。而 <C-a>/<C-e>/<C-r>/<C-w>
+    -- 这些是 readline 的常用键,抢了会难受;
+    -- <C-c>/<C-d>/<C-z> 更不能碰(中断 / EOF / 挂起)。
+    --
+    -- ⚠️ 别顺手改成 <Space>tt:空格在 shell 里是最普通的字符。一旦它成了映射
+    -- 前缀,终端里每打一个空格都要等 timeoutlen(400ms)才会送进 shell ——
+    -- 等于把终端废掉。这和 plugins/explorer.lua 里不把 <Space>e 绑成 yazi
+    -- 切换键是同一个道理。
+    vim.keymap.set('t', '<C-q>', function()
+      M.toggle()
+    end, { buf = args.buf, desc = '终端:收起浮窗' })
+
     -- 普通模式下按 q 收起浮窗(和 help/qf 的行为一致)
     vim.keymap.set('n', 'q', function()
       M.toggle()

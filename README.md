@@ -3,7 +3,7 @@
 一套精简、可跨平台同步的 Neovim 配置。Windows 和 macOS 共用同一份仓库,
 Win11 上用 Windows Terminal、macOS 上也可能被 iPad 通过 mosh 远程使用。
 
-23 个插件(对比 LazyVim 的 60+),没有成品发行版那层 abstraction,
+28 个插件(对比 LazyVim 的 60+),没有成品发行版那层 abstraction,
 每个文件都能直接读懂、直接改。
 
 ---
@@ -44,6 +44,8 @@ git clone <仓库地址> ~/.config/nvim
 | **C 编译器** | 同上 | 通常已有(gcc/clang) | Xcode 命令行工具 |
 | ripgrep | 全文搜索 | `scoop install ripgrep` | `brew install ripgrep` |
 | fd | 文件查找 | `scoop install fd` | `brew install fd` |
+| yazi | 文件管理(`<Space>e`),也接管 `nvim <目录>` | `scoop install yazi` | `brew install yazi` |
+| lazygit | 完整 git TUI(`<Space>gg`) | 先 `scoop bucket add extras`,再 `scoop install lazygit` | `brew install lazygit` |
 
 **缺失不会导致 nvim 起不来。** 少了 `tree-sitter-cli` 时 cpp / python 会自动退回
 内置的正则高亮并给出提示,C 和 Lua 用的是 nvim 自带解析器,不受影响。
@@ -79,10 +81,8 @@ leader 键是**空格**。记不住键位时直接按 `<Space>`,which-key 会弹
 | `<Space>bd` / `<Space>bo` | 关闭当前 / 其它缓冲区 |
 | `<Space>cd` | 显示当前行的诊断 |
 | `[d` / `]d` | 上/下一个诊断 |
-| `<Space>tt` | **浮动终端**开关(终端里 `<Esc><Esc>` 回普通模式,`q` 收起) |
-| `<Space>e` | **侧边文件树**开关 |
-| `<Space>E` | 文件树:定位到当前文件 |
-| `-` | 用 oil 打开当前文件所在目录 |
+| `<Space>tt` | **浮动终端**开关(终端里 `<C-q>` 一步收起;或 `<Esc><Esc>` 回普通模式再按 `q`) |
+| `<Space>e` | **文件管理**:打开 yazi(起在当前文件所在目录) |
 | `<Space>fn` | 新建文件 |
 | `<Space>sn` | **编辑 nvim 配置** |
 
@@ -115,6 +115,12 @@ leader 键是**空格**。记不住键位时直接按 `<Space>`,which-key 会弹
 圆角边框。**收起时只是隐藏窗口、不杀进程** —— 下次 `<Space>tt` 打开还是同一个
 会话,里面跑的东西都还在。
 
+收起浮窗有三条路:终端里直接按 **`<C-q>`**(一步最快)、`<Esc><Esc>` 回普通模式
+再按 `q`(和 help / quickfix 窗口的习惯一致)、或再按一次 `<Space>tt`。
+选 `<C-q>` 是因为它原本是终端的 XON 流控,日常用不到;而 `<Space>tt` **不能**
+在终端里用 —— 空格是 shell 里最普通的字符,一旦成了映射前缀,每打一个空格都要
+等 400ms 才送进 shell。
+
 **终端开在当前文件所在目录**,所以打开 `main.c` 后按 `<Space>tt` 就能直接:
 
 ```bash
@@ -127,16 +133,31 @@ gcc main.c -o main && ./main
 有风险,如果 shell 里正有个程序在等输入,那串字符会被它当成输入吃掉。
 目录不一致时会提示一句,想换目录按 `<Space>tT` 在新目录重开。
 
-#### 文件树 vs oil
+#### 文件管理:yazi
 
-两者定位不同,不是重复:
+`<Space>e` 打开 **yazi**,起点是**当前文件所在目录**。yazi 本身是独立的 TUI 文件
+管理器(`lua/plugins/explorer.lua` 只是把它接进 nvim),浏览、移动、改名、批量
+操作都在它自己窗口里完成。
 
-| | 用途 | 特点 |
+原来这里是 nvim-tree + oil 两个插件,职责重叠,已合并成这一个入口。
+**功能对等,但形态不等价** —— 三点差异要清楚:
+
+| 原键位 | 原来 | 现在 |
 |---|---|---|
-| `<Space>e` 文件树 | 浏览、找文件 | 固定 32 列侧栏,不占你的编辑区 |
-| `-` oil | **批量操作** | 把目录当普通缓冲区,用 `:%s/`、`dd`、`p` 直接改名/移动/新建,`:w` 才真正落盘 |
+| `<Space>e` | nvim-tree:固定 32 列常驻侧边栏 | yazi:独立窗口,不常驻、也不占编辑区 |
+| `-` | oil:把目录当缓冲区,用 `:%s/`、`dd` 改路径 | **已释放**,回到 vim 内建的「行首上移」 |
+| `<Space>E` | nvim-tree:在树里定位当前文件 | **已删除** —— yazi 不是树,没有对等物 |
 
-oil 里按 `q` 关闭(nvim-tree 不会接管「打开目录」的行为,`nvim <目录>` 仍走 netrw)。
+**`nvim <目录>` 现在直接开 yazi**(取代 netrw),所以 `nvim .` 就能浏览当前目录。
+这条靠 `open_for_directories`;实现细节、以及「为什么它的懒加载不能用 `cmd` 而
+必须用 `event`」写在 `lua/plugins/explorer.lua` 顶部注释里。
+
+**退出 yazi 按 `q`**(yazi 自己的键,按完干净退回原文件)。`<Space>e` 只负责
+打开、**不做切换** —— 理由写在 `explorer.lua` 注释里:yazi 里 `<Space>` 是
+「选中文件」,把它变成映射前缀会让每次选文件都等 400ms。
+
+> yazi 的**文件图标和图片预览需要 Nerd Font**。没有 Nerd Font 的终端(iPad
+> RootShell 就是)基本操作不受影响,只是图标位置缺字形。
 
 > `jk` / `jj` 会占掉这两个字母组合,插入模式下打不出来。中英文里极少见,
 > 不想要的话删掉 `keymaps.lua` 顶部那两行即可。
@@ -178,6 +199,7 @@ oil 里按 `q` 关闭(nvim-tree 不会接管「打开目录」的行为,`nvim <�
 | `<Space>ca` / `<Space>la` | 代码操作(自动导入、快速修复) |
 | `<Space>cl` | 查看 LSP 客户端状态 |
 | `]c` / `[c` | 上/下一个 Git 改动块 |
+| `<Space>gg` | **lazygit**:完整 git TUI(提交 / 分支 / rebase);没装 lazygit 时退回终端 `git` |
 
 ### 界面(`<Space>u`)
 
@@ -186,6 +208,20 @@ oil 里按 `q` 关闭(nvim-tree 不会接管「打开目录」的行为,`nvim <�
 | `<Space>ut` | **切换主题**(带实时预览,选择会被记住) |
 | `<Space>ui` | 图标 / ASCII 切换 |
 | `<Space>uo` | mosh 卡顿优化开关 |
+
+#### 几个纯视觉增强
+
+都是在新加插件时一起做的,不需要按键:
+
+- **彩虹缩进线**(indent-blankline)—— 每层缩进不同颜色,色板取自 One Dark
+- **彩虹括号**(rainbow-delimiters)—— 嵌套的括号/引号按层级变色
+- **代码上下文头**(treesitter-context)—— 顶部吸附显示当前所在的函数/类签名
+- **浮动通知**(mini.notify)—— 所有提示变成右上角浮窗。**这改变了全部消息的
+  显示方式**:以前多行消息会顶出「Press ENTER or type command to continue」,
+  现在浮窗放得下,不再打断你;`:Snakenvim` 的整份状态摘要也能完整显示
+
+> 缩进线用的是 `│`(U+2502,方块绘制字符),不用 Nerd Font 私有区 ——
+> 和状态栏、诊断图标是同一套「不依赖 Nerd Font」的思路。
 
 ---
 
@@ -219,7 +255,7 @@ oil 里按 `q` 关闭(nvim-tree 不会接管「打开目录」的行为,`nvim <�
 | `n` | 新建文件(输入路径) |
 | `f` | 查找文件 |
 | `r` | 最近打开的文件 |
-| `c` | 打开配置目录(用 oil,可直接编辑) |
+| `c` | 打开配置目录(用 yazi,可直接编辑) |
 | `q` | 退出 |
 
 把光标移到某一行按回车也可以。这些快捷键**只在该界面内生效**,不会污染其它缓冲区。
@@ -281,11 +317,19 @@ local ADAPTIVE = true      -- 关掉就固定块体、不垂直居中
 | **oxocarbon**(默认) | `#161616` 中性黑 | 单色极简,连强调色都不带蓝 |
 | carbonfox | `#161616` 中性黑 | 纯黑冷调,但强调色是蓝的 |
 | kanagawa | `#1f1f28` 偏蓝 | 深墨底,蓝紫点缀 |
-| catppuccin | `#1e1e2e` 偏蓝 | 柔和低对比(mocha) |
+| catppuccin | `#1a1b1d` 中性黑 | **Trae 配色**:近黑底 + 柔和粉彩 |
 | rose-pine | `#191724` 偏蓝 | 优雅紫调 |
 
-默认选 oxocarbon 的原因:五套里只有它的底色是**真正中性**的(R=G=B=22),
+默认选 oxocarbon 的原因:只有它的底色是**真正中性**的(R=G=B=22),
 而且它是单色主题、强调色也不带蓝。其余几套的底色都偏蓝(B 通道比 R/G 高)。
+
+> **catppuccin 那一项被调成了 Trae 的配色。** 色值不是猜的,是从本机 Trae CN 的
+> `globalStorage/state.vscdb` 里读出来的:它的主题其实是 `icube-themes` 扩展的
+> `themes/dark_plus.json`,但调色板是 icube 自己调过的 —— 底色 `#1a1b1d`
+> (中性灰,不偏蓝),蓝色 `#80BBFF`、绿色 `#82D99F`、紫色 `#B38CFF`。
+> 换句话说:**它不是 One Dark**(One Dark 的底色 `#282c34` 明显偏蓝)。
+> 实现方式是 catppuccin 的 `color_overrides`(见 `plugins/colorschemes.lua`),
+> 前 15 个槽位直接取自 Trae,所以零新增依赖。
 
 > 换主题的方式:改 `lua/config/theme.lua` 里的 `M.default_theme`,
 > **并且**清掉 `stdpath('state')/snakenvim.json` 里记住的 `theme` ——
@@ -332,13 +376,17 @@ LSP 安装清单、解析器清单、格式化器清单、缩进规则四件事�
 
 ### 如果 iPad 上操作发涩
 
-按 `<Space>uo` 打开 mosh 卡顿优化。它会关掉三个「光标一动就重绘」的东西:
+按 `<Space>uo` 打开 mosh 卡顿优化。它会关掉这几个「光标一动就重绘」的东西:
 
 - `cursorline` — 每次移动整行重绘
-- `mini.indentscope` — 缩进指示线
+- **缩进线**(indent-blankline)— 每次移动重绘缩进指示线
+- **代码上下文头**(treesitter-context)— 它按光标位置重算当前函数/类
 - 调高 `updatetime` — 降低 CursorHold 类动作的触发频率
 
 默认关闭,因为横屏 + 物理键盘下的体验和本机很接近,没必要默认牺牲这些。
+
+> 彩虹括号**不在**这个开关里。它的开销是按缓冲区变化触发的,不属于「光标一动就
+> 重绘」那一类,而且它只有按缓冲区的 API、没有全局开关。这是刻意的,不是漏做。
 
 ### 如果 RootShell 字体不支持 Nerd Font
 

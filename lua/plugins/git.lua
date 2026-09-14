@@ -1,9 +1,39 @@
 -- snakenvim — Git
 --
--- 只做「显示改动 + 快速跳转/暂存」。不做完整的 Git 客户端界面,
--- 需要提交/推送时用 <Space>gg 直接开 lazygit(若装了)或 :terminal git。
+-- 分工,两个插件互补:
+--   gitsigns   行内标记改动、暂存/撤销单个改动块。轻,常驻,不做完整界面
+--   lazygit    <Space>gg 打开完整 TUI:提交、分支、rebase、推送
+-- 日常改动用 gitsigns 就够,要提交或整理历史时进 lazygit。
 
 return {
+  -- ── lazygit:完整的 git TUI ────────────────────────────────────────────
+  -- lazygit 本身是独立 TUI 程序(brew install lazygit),这个插件只负责把它
+  -- 塞进浮动窗口。上游 README 自己就推荐绑 <leader>gg,和本文件原来的注释
+  -- 承诺一致 —— 那个键以前只写在注释里、并没真的定义,这次一并兑现。
+  {
+    'kdheepak/lazygit.nvim',
+    cmd = { 'LazyGit', 'LazyGitCurrentFile', 'LazyGitConfig', 'LazyGitFilter' },
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    keys = {
+      {
+        '<leader>gg',
+        function()
+          -- 二进制缺失时给退路,别让按键直接抛错 —— 插件在但 CLI 不在是很常见的状态
+          if vim.fn.executable('lazygit') == 1 then
+            vim.cmd('LazyGit')
+          else
+            vim.notify(
+              'snakenvim:未找到 lazygit,先退回终端。装它:brew install lazygit',
+              vim.log.levels.WARN
+            )
+            vim.cmd('terminal git')
+          end
+        end,
+        desc = 'Git:打开 lazygit(缺失时退回终端 git)',
+      },
+    },
+  },
+
   {
     'lewis6991/gitsigns.nvim',
     event = { 'BufReadPre', 'BufNewFile' },

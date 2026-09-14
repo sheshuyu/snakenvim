@@ -1,4 +1,7 @@
 -- snakenvim — 语法高亮与编辑增强
+--
+-- 高亮相关的都在这儿:devicons、treesitter、彩虹括号、代码上下文头。
+-- 纯界面元素(状态栏、缩进线)在 plugins/ui.lua。
 
 local theme = require('config.theme')
 local langs = require('config.langs')
@@ -6,7 +9,7 @@ local profile = require('config.profile')
 
 return {
   -- ── 图标字形 ────────────────────────────────────────────────────────
-  -- 只在图标开启时加载。关闭图标时不加载它,telescope / oil 自然就只显示文字,
+  -- 只在图标开启时加载。关闭图标时不加载它,telescope 自然就只显示文字,
   -- 不会留下任何缺字形的豆腐块。
   -- 注意:这项改动要重启 nvim 才完全生效(见 config/theme.lua 的 toggle_icons)。
   {
@@ -107,6 +110,45 @@ return {
     end,
   },
 
+  -- ── 彩虹括号 ────────────────────────────────────────────────────────
+  -- 按嵌套层级给括号/引号上不同颜色,treesitter 驱动。
+  --
+  -- 刻意**不挂到 mosh 卡顿开关**(<Space>uo)上:那个开关的定位是关掉
+  -- 「光标一动就重绘」的东西,而这个插件的开销是按**缓冲区变化**触发的,
+  -- 不属于那一类;而且它只有按缓冲区的 API
+  -- (require('rainbow-delimiters').enable/disable(bufnr))、没有全局命令,
+  -- 想全局禁用得遍历所有已开缓冲区、再额外处理后续新开的,不划算。
+  {
+    'HiPhish/rainbow-delimiters.nvim',
+    event = { 'BufReadPre', 'BufNewFile' },
+    -- 入口是 rainbow-delimiters.setup 而不是 rainbow-delimiters 本身
+    -- (后者只暴露 enable/disable/toggle),所以不能用 opts,得显式 config
+    config = function()
+      require('rainbow-delimiters.setup').setup({})
+    end,
+  },
+
+  -- ── 代码上下文头 ────────────────────────────────────────────────────
+  -- 顶部吸附显示当前所在的函数/类签名,像 VSCode 的 sticky scroll。
+  -- 光标移到函数内部就会看到;跨文件跳转后知道自己在哪一层,读代码很省事。
+  {
+    'nvim-treesitter/nvim-treesitter-context',
+    event = { 'BufReadPre', 'BufNewFile' },
+    opts = function()
+      return {
+        -- mosh 卡顿优化开着时不启用。mode='cursor' 意味着**光标一移动就要
+        -- 重算上下文**,正是那个开关要压制的东西。
+        --
+        -- 这里读一次决定初始状态;运行时的开关在 config/theme.lua 的
+        -- apply_mosh_opts 里(那边只在插件已加载时才调 :TSContext,避免
+        -- 为了切个开关就把懒加载的插件提前拉起来)。
+        enabled = not vim.g.snakenvim_mosh_opts,
+        mode = 'cursor',
+        max_lines = 3, -- 别让它把顶部吃掉太多行
+      }
+    end,
+  },
+
   -- ── mini.nvim:一次依赖覆盖多个小功能 ────────────────────────────────
   -- 只启用需要的模块,取代 nvim-autopairs / nvim-surround / Comment.nvim
   -- 三个独立插件,少两份依赖。
@@ -139,35 +181,32 @@ return {
       -- gc 注释、gcc 注释当前行
       require('mini.comment').setup()
 
-      -- 缩进范围指示线
-      require('mini.indentscope').setup({
-        symbol = '│',
-        options = { try_as_border = true },
+      -- 浮动通知。setup 会把 vim.notify 接管掉,于是全仓库那些 vim.notify(...)
+      -- 自动变成右上角浮窗 —— 顺带根治了「多行消息触发 Press ENTER」的老问题
+      -- (命令行区域放不下多行,浮窗没这个限制)。
+      --
+      -- 选 mini.notify 而不是 rcarriga/nvim-notify:后者 ★3572 但一年没更新,
+      -- 而 mini 这个零新增依赖,正合本文件开头那句「一次依赖覆盖多个小功能」。
+      --
+      -- 已知取舍:mini.nvim 是 event = 'VeryLazy',比 init.lua 里的 theme.setup()
+      -- 晚,所以**启动阶段极早期**的通知仍走原生样式。实践中启动期只有
+      -- 上面那个 tree-sitter 缺失提示(它走 vim.schedule),而 tree-sitter 已装好,
+      -- 不会触发 —— 所以不为它调整 mini.nvim 的加载时机。
+      --
+      -- 把 max_width_share 从默认的 0.382 放宽到 0.6:默认值在 80 列的终端里
+      -- 只有约 30 列宽,而 :Snakenvim 的状态摘要最长那几行有 40 列左右
+      -- (比如「剪贴板 : osc52(远程:y 会回到眼前的终端)」),会被截断。
+      -- 0.6 在 80 列下约 48 列,够用,也不会糊满整屏。
+      require('mini.notify').setup({
+        window = { max_width_share = 0.6 },
+        -- 关掉 LSP 进度通知。它默认是开的,而 pyright 之类会疯狂上报
+        -- 「N files to analyze (0%)」—— 是右上角刷屏的主要来源。
+        -- LSP 有没有在干活,状态栏的客户端名和 :LspInfo 都能看,不需要弹窗。
+        lsp_progress = { enable = false },
       })
-    end,
-  },
 
-  -- ── oil:把文件系统当普通缓冲区编辑 ──────────────────────────────────
-  -- 打开目录后用普通编辑操作改名/删除/新建,保存时真正落盘。
-  {
-    'stevearc/oil.nvim',
-    cmd = 'Oil',
-    keys = {
-      -- 只留一个入口:侧边文件树是 <Space>e,oil 是「把目录当缓冲区编辑」,
-      -- 两者定位不同,不要都绑到 <Space>e 上(之前就是这么绑的,
-      -- 结果按第二次只是重新打开,退不回去)
-      { '-', '<CMD>Oil<CR>', desc = '用 oil 打开所在目录' },
-    },
-    opts = {
-      columns = { 'icon' },
-      view_options = { show_hidden = true },
-      float = { border = 'rounded' },
-      delete_to_trash = false, -- 直接删除。想用回收站改成 true
-      skip_confirm_for_simple_edits = true,
-      keymaps = {
-        -- oil 默认没有「关闭」键位(只有 <C-c>),加一个 q 更符合直觉
-        ['q'] = { 'actions.close', mode = 'n' },
-      },
-    },
+      -- 注:缩进线曾经是这里的 mini.indentscope,现已换成 plugins/ui.lua 里的
+      -- indent-blankline(彩虹缩进线)。两者都在同一列画竖线,留着会叠在一起。
+    end,
   },
 }

@@ -14,7 +14,7 @@ local M = {}
 M.themes = {
   { id = 'kanagawa',   plugin = 'kanagawa.nvim',  scheme = 'kanagawa',         label = 'kanagawa · 深墨底 蓝紫点缀' },
   { id = 'oxocarbon',  plugin = 'oxocarbon.nvim', scheme = 'oxocarbon',        label = 'oxocarbon · 近纯黑 极简克制' },
-  { id = 'catppuccin', plugin = 'catppuccin',     scheme = 'catppuccin-mocha', label = 'catppuccin · 柔和低对比 (mocha)' },
+  { id = 'catppuccin', plugin = 'catppuccin',     scheme = 'catppuccin-mocha', label = 'catppuccin · Trae 配色(近黑底 + 粉彩)' },
   { id = 'rose-pine',  plugin = 'rose-pine',      scheme = 'rose-pine',        label = 'rose-pine · 优雅紫调' },
   { id = 'carbonfox',  plugin = 'nightfox.nvim',  scheme = 'carbonfox',        label = 'carbonfox · 纯黑冷调' },
 }
@@ -22,7 +22,8 @@ M.themes = {
 -- 默认主题。选 oxocarbon 而不是 kanagawa:后者的底色 #1f1f28 是偏蓝的
 -- (B=40 而 R=G=31),整屏会泛蓝。oxocarbon 的底色 #161616 是真正中性的黑
 -- (R=G=B=22),而且它本身就是单色主题,连强调色都不带蓝。
--- 其余三套(catppuccin #1e1e2e、rose-pine #191724)底色同样偏蓝。
+-- 其余几套(kanagawa #1f1f28、rose-pine #191724)底色都偏蓝。
+-- (catppuccin 那一项已经被调成 Trae 配色,底色 #1a1b1d 也是中性黑。)
 M.default_theme = 'oxocarbon'
 
 -- ── 状态读写 ────────────────────────────────────────────────────────────
@@ -149,16 +150,34 @@ end
 --- mosh 卡顿优化开关。默认关闭 —— 横屏 + 物理键盘下体验和本机接近,
 -- 没必要默认牺牲 cursorline。真觉得远程操作发涩时再开。
 --
--- 这三项都是「光标一动就重绘」的东西,在 mosh 链路上会被放大成发涩的手感:
---   cursorline      每次移动整行重绘
---   indentscope     每次移动重绘缩进指示线
---   updatetime      越小越频繁触发 CursorHold 类动作(诊断浮窗、引用高亮)
+-- 这几项都是「光标一动就重绘」的东西,在 ssh / mosh 链路上会被放大成发涩的手感:
+--   cursorline          每次移动整行重绘
+--   缩进线(ibl)         每次移动重绘缩进指示线
+--   代码上下文头          mode='cursor',光标一动就要重算当前函数/类
+--   updatetime           越小越频繁触发 CursorHold 类动作(诊断浮窗、引用高亮)
+--
+-- 刻意**不管彩虹括号**:它的开销是按缓冲区变化触发的,不属于「光标一动就重绘」,
+-- 而且它只有按缓冲区的 API、没有全局开关。这不是漏做,别顺手补上。
 function M.apply_mosh_opts()
   local on = M.state.mosh_opts
   vim.opt.cursorline = not on
   vim.opt.updatetime = on and 500 or 250
-  vim.g.miniindentscope_disable = on
-  vim.g.snakenvim_mosh_opts = on
+  vim.g.snakenvim_mosh_opts = on -- 下面两个插件的 opts 会读它,决定初始状态
+
+  -- 运行时切换。只在插件**已经加载**时才动手 —— 否则这里的 require 会把
+  -- 懒加载的插件在启动时就提前拉起来,白白拖慢启动;而它们的 opts 已经读过
+  -- 上面那个全局变量,初始状态本来就是对的。
+  if package.loaded['ibl'] then
+    -- ⚠️ 这里必须用 update,**不能用 setup**。ibl 的三个入口语义不同:
+    --   setup     → set_config,     = 默认值 + 传入值(**会把彩虹配色重置掉**)
+    --   update    → update_config,  = 当前配置 + 传入值 ← 要的是这个
+    --   overwrite → overwrite_config
+    -- 而且 enabled 是每次渲染时按缓冲区读的,所以 update 一下即时生效,不用重启。
+    pcall(function() require('ibl').update({ enabled = not on }) end)
+  end
+  if package.loaded['treesitter-context'] then
+    pcall(vim.cmd, on and 'TSContext disable' or 'TSContext enable')
+  end
 end
 
 -- ── 交互命令 ────────────────────────────────────────────────────────────

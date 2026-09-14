@@ -206,10 +206,18 @@ local function menu_row(label, shortcut, total_w, label_w)
   end
 
   local line = left .. ' ' .. string.rep('┈', dots) .. ' ' .. shortcut
-  local dot_start = lw + 1
+
+  -- ⚠️ 分段的下标必须是【字符下标】,不能拿上面的 lw 直接用。
+  -- lw = width(left) 是**显示宽度**(中文按 2 算),而 seg() 内部要按字符下标
+  -- 去换算字节偏移。两者在中文标签下差不小:『新建文件』是 4 个字符、显示宽度 8。
+  -- 之前传 lw 的结果是 Button 段多盖住几个引导线字符、Leader 段从中间才开始,
+  -- 看上去就是「同一条横线有一段颜色不对」。
+  -- dots 仍然用显示宽度算是对的 —— 每个 ┈ 显示宽度正好是 1,两者等价。
+  local left_chars = char_count(left)
+  local dot_start = left_chars + 1
 
   return line, {
-    seg(line, 'SnakeDashboardButton', 0, lw),
+    seg(line, 'SnakeDashboardButton', 0, left_chars),
     seg(line, 'SnakeDashboardLeader', dot_start, dot_start + dots),
     seg(line, 'SnakeDashboardShortcut', dot_start + dots + 1, -1),
   }
@@ -247,13 +255,18 @@ local ENTRIES = {
     end,
   },
   {
-    -- 用 :Oil 而不是 require('oil'):oil 是懒加载的,直接 require 会因为
-    -- 模块还不在 runtimepath 上而失败。:Oil 命令由 lazy 在加载插件时创建,
-    -- 调用它会自动触发加载。
+    -- 为什么是「先 load 再 require」而不是直接敲 :Yazi 命令,两个原因:
+    --   1. yazi.nvim 是懒加载的,直接 require('yazi') 会因为模块还不在
+    --      runtimepath 上而失败(以前用 oil 时踩的就是这个)
+    --   2. :Yazi 的参数是**子命令**(cwd / toggle / logs),不收路径 ——
+    --      所以写不出 `:Yazi <目录>` 这种直译,只能走 Lua API。
+    --      require('lazy').load{...} 是本仓库既有范式,见 config/theme.lua。
     '打开配置目录',
     'c',
     function()
-      vim.cmd('Oil ' .. vim.fn.fnameescape(vim.fn.stdpath('config')))
+      local dir = vim.fn.stdpath('config')
+      require('lazy').load({ plugins = { 'yazi.nvim' } })
+      require('yazi').yazi(nil, dir)
     end,
   },
   {
