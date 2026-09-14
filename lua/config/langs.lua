@@ -94,9 +94,39 @@ function M.parsers()
   return collect('parsers')
 end
 
---- 需要 mason 安装的格式化器清单
+--- 需要 mason 安装的格式化器清单,返回 **conform 的格式化器名**(给 conform 用)
 function M.formatters()
   return collect('formatter')
+end
+
+-- ── conform 名 → mason 包名 ─────────────────────────────────────────────
+-- 这两套名字不总是一致,混淆会导致 mason-tool-installer 直接报
+-- "Cannot find package"。只列不一致的,一致的(stylua / prettier 等)不用列。
+local mason_package = {
+  clang_format = 'clang-format',
+  ruff_format = 'ruff',
+  ruff_fix = 'ruff',
+  ruff_organize_imports = 'ruff',
+  goimports = 'goimports',
+  rustfmt = 'rustfmt',
+}
+
+--- 把一个 conform 格式化器名翻译成 mason 包名
+function M.mason_name(formatter)
+  return mason_package[formatter] or formatter
+end
+
+--- 需要 mason 安装的格式化器清单,返回 **mason 包名**(给 mason 和自检用)
+function M.mason_formatters()
+  local seen, out = {}, {}
+  for _, f in ipairs(M.formatters()) do
+    local name = M.mason_name(f)
+    if not seen[name] then
+      seen[name] = true
+      out[#out + 1] = name
+    end
+  end
+  return out
 end
 
 return M

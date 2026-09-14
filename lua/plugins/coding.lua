@@ -38,11 +38,14 @@ return {
   },
 
   -- ── mason-tool-installer:装格式化器(上面那个只管 LSP)──────────────
+  -- 注意用 mason_formatters() 而不是 formatters():
+  -- 前者给的是 mason 包名(clang-format),后者是 conform 的格式化器名(clang_format)。
+  -- 这里要的是 mason 包名,传错了会报 "Cannot find package"。
   {
     'WhoIsSethDaniel/mason-tool-installer.nvim',
     dependencies = { 'mason-org/mason.nvim' },
     opts = {
-      ensure_installed = langs.formatters(),
+      ensure_installed = langs.mason_formatters(),
       run_on_start = true,
       start_delay = 1000, -- 让启动先完成,别和 LSP 抢下载带宽
       auto_update = false,

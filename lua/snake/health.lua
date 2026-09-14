@@ -99,19 +99,13 @@ function M.status()
   end
 
   -- 格式化器由 mason 装到自己的 bin 目录,运行时会被前置进 PATH。
-  -- conform 的格式化器名和实际可执行文件名并不总是一致,这里显式对应。
-  local fmt_bin = {
-    clang_format = 'clang-format',
-    ruff_format = 'ruff',
-    stylua = 'stylua',
-    prettier = 'prettier',
-  }
-  for _, fmt in ipairs(langs.formatters()) do
-    local bin = fmt_bin[fmt] or fmt
+  -- 注意用 mason_formatters()(mason 包名),不是 formatters()(conform 名)——
+  -- 我们要查的是磁盘上的可执行文件,它和 mason 包名一致(clang-format / ruff / stylua)。
+  for _, name in ipairs(langs.mason_formatters()) do
     out.formatters[#out.formatters + 1] = {
-      name = fmt,
-      bin = bin,
-      found = vim.fn.executable(bin) == 1,
+      name = name,
+      bin = name,
+      found = vim.fn.executable(name) == 1,
     }
   end
 
