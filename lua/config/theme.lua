@@ -203,24 +203,44 @@ function M.setup()
   M.apply_mosh_opts()
 end
 
--- 换主题时只记到内存,不写盘 —— telescope 预览会连续触发 ColorScheme,
--- 每次都写文件既浪费又没必要。真正的落盘放在退出时。
+-- 换主题时只刷新 lualine 配色,不记录选择(原因见下面 VimLeavePre 那段)
 vim.api.nvim_create_autocmd('ColorScheme', {
   group = vim.api.nvim_create_augroup('snake_theme_track', { clear = true }),
   callback = function()
-    local name = vim.g.colors_name
-    if not name then
-      return
-    end
-    -- 认得出就存 id,认不出就存原始名字(下次启动照样能用)
-    M.state.theme = scheme_to_id[name] or name
     pcall(function() require('lualine').refresh() end)
   end,
 })
 
+-- 记录选择:只在退出时做一次,而且**只认我们自己列表里的主题**。
+--
+-- 为什么不在 ColorScheme 事件里随手记:很多插件会在运行中临时切配色。
+-- lazy.nvim 装插件时就会按 install.colorscheme 切一次 —— 它的默认值是
+-- {"habamax"},而且会强制把 habamax 追加进列表,所以哪怕我们不配它,
+-- 装插件时也一定会切。于是整条错误链是:
+--
+--   启动 → lazy 检测到缺插件 → 切成 habamax/kanagawa(触发 ColorScheme)
+--        → 被监听记进 M.state.theme → theme.setup() 读到被污染的记录
+--        → 你选的主题被重置
+--
+-- 这个 bug 真实发生过:主题改成 oxocarbon 后,只要装过一次插件,
+-- 退出时就被写回旧值,表现得像「改了根本不生效」。
+--
+-- 只认列表内的主题就能让这些临时配色被忽略。
+-- 代价:手动 `:colorscheme habamax` 这类列表外的主题不会被记住 ——
+-- 相比「选择被莫名重置」,这个代价划算得多。
 vim.api.nvim_create_autocmd('VimLeavePre', {
   group = vim.api.nvim_create_augroup('snake_theme_persist', { clear = true }),
-  callback = write_state,
+  callback = function()
+    local name = vim.g.colors_name
+    if name and name ~= '' then
+      local id = scheme_to_id[name]
+      if id then
+        M.state.theme = id
+      end
+      -- 不在列表里就保持原样,不动 M.state.theme
+    end
+    write_state()
+  end,
 })
 
 return M
