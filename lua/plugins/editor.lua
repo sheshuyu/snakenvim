@@ -149,6 +149,64 @@ return {
     end,
   },
 
+  -- ── markdown 渲染 ───────────────────────────────────────────────────
+  -- 在缓冲区里直接把 markdown「画」出来:标题加粗放大、表格对齐成真表格、
+  -- 代码块加底色、`- [ ]` 变成复选框。靠 treesitter + extmarks 实现,
+  -- **不改动文件内容**,写回磁盘的仍是纯 markdown。
+  --
+  -- 【为什么是它】
+  -- 另外几个常见方案都是「另开一个窗口/浏览器预览」:
+  --   glow.nvim              已归档
+  --   markdown-preview.nvim  要 node + 浏览器
+  --   peek.nvim              要 deno
+  -- 而你经常在 iPad 的 ssh 里用 —— 那边根本弹不出浏览器窗口。这个是直接在
+  -- 终端缓冲区里渲染的,ssh 下照常工作。
+  --
+  -- 【⚠️ 四处图标必须覆盖:它的默认值全是 Nerd Font 私有区码点】
+  -- 实测它的默认值:
+  --   heading.icons          = { '󰲡 ', '󰲣 ', ... }   U+F0CA1 一带
+  --   checkbox.*.icon        = '󰄱 ' / '󰱒 '
+  --   code.language_icon     = true   → 走 mini.icons / devicons,也是私有区
+  --   link.enabled           = true   → 每个站点的图标(web/github/discord…)
+  -- 你的终端(iPad RootShell)没装 Nerd Font,照默认配置会显示成一片豆腐块。
+  -- 这和 config/theme.lua 的诊断图标、plugins/ui.lua 的缩进线是同一套原则。
+  --
+  -- 日后装了 Nerd Font 想要回图标:把下面这四段覆盖删掉即可恢复默认。
+  {
+    'MeanderingProgrammer/render-markdown.nvim',
+    -- 只在 markdown 缓冲区加载,其他文件类型完全不碰
+    ft = { 'markdown' },
+    dependencies = {
+      -- 解析 markdown 结构靠 treesitter。nvim 自带 markdown / markdown_inline
+      -- 解析器,这里声明依赖只是保证 nvim-treesitter 先就位。
+      'nvim-treesitter/nvim-treesitter',
+      -- 图标提供者用仓库里已有的 mini.nvim。
+      -- 注意别写 nvim-mini/mini.nvim(上游 README 里是这个名字)——那是另一个
+      -- 仓库名,lazy 会当成新插件再装一份。
+      'echasnovski/mini.nvim',
+    },
+    opts = {
+      heading = {
+        -- 六个空串 = 不画图标。标题本身照样加粗、变色、层级分得清
+        icons = { '', '', '', '', '', '' },
+      },
+      checkbox = {
+        unchecked = { icon = '[ ] ' },
+        checked = { icon = '[x] ' },
+      },
+      code = {
+        language_icon = false, -- 关掉图标,保留下面的文字(语言名/信息)
+        -- 实测:只设 language_icon=false 时,```bash 代码块上方仍会画出一个
+        -- U+E795(devicons 给 sh/zsh 的图标)。所以连语言标注一起关掉。
+        -- 代价:代码块上方的 `bash` / `python` 这类语言名不再显示。
+        language = false,
+      },
+      link = {
+        enabled = false, -- 只影响「链接前面的站点图标」,不影响链接本身的渲染
+      },
+    },
+  },
+
   -- ── mini.nvim:一次依赖覆盖多个小功能 ────────────────────────────────
   -- 只启用需要的模块,取代 nvim-autopairs / nvim-surround / Comment.nvim
   -- 三个独立插件,少两份依赖。

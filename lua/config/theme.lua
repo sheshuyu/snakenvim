@@ -112,6 +112,46 @@ function M.apply(id)
     return
   end
   M.state.theme = t.id
+  -- 放在 :colorscheme **之后**:此刻主题(以及它的 ColorScheme 处理器)已经把
+  -- 自己的背景色写完了,我们再压黑才不会被盖掉。
+  M.apply_pure_black()
+end
+
+--- 把编辑器背景压成纯黑(#000000)。
+--
+-- 【为什么不只改 Normal】
+-- 主题会给好几个组各自配一个「比 Normal 略浅」的背景色 —— 实测当前主题下:
+--   NormalFloat #17191a   Folded #292c34   Pmenu #17191a
+--   PmenuSbar   #222427   FloatBorder #17191a
+-- 只把 Normal 压黑的话,浮动窗口、代码折叠、补全菜单、浮窗边框这些地方会留下
+-- 一条条浅色带,看着像没擦干净。所以一并压黑。
+--
+-- 【刻意**不**碰的组】
+--   Visual / CursorLine / PmenuSel —— 这三个是**靠背景色来指示状态**的:
+--   选区要能看出选中、光标行要能看出在哪、补全菜单要能看出选的是哪项。
+--   把它们一起压黑就等于把这些功能弄没了。要的是「背景黑,该亮的还亮」,
+--   不是「所有背景都一样黑」。
+--
+-- 【这两个组其实不用管】(它们本来就透明,直接透出 Normal 的黑)
+--   SignColumn / LineNr / EndOfBuffer / WinSeparator
+--
+-- 【为什么要挂在两处】
+-- 每次换主题,主题都会把自己的背景色重新写回来,所以:换主题时得再压一次。
+-- 调用于 M.apply() 的 :colorscheme 之后,以及 ColorScheme 事件里。
+function M.apply_pure_black()
+  local BLACK = 0x000000 -- nvim_set_hl 接受数字形式的颜色
+  for _, g in ipairs({
+    'Normal', 'NormalFloat', 'NormalNC',
+    'Folded', 'Pmenu', 'PmenuSbar',
+    'FloatBorder', 'TabLineFill',
+  }) do
+    local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = g, link = false })
+    if ok and type(hl) == 'table' then
+      -- 只覆盖 bg,其余(前景色、加粗、斜体)原样带回去
+      hl.bg = BLACK
+      vim.api.nvim_set_hl(0, g, hl)
+    end
+  end
 end
 
 --- 图标 / ASCII 切换。
@@ -230,6 +270,9 @@ vim.api.nvim_create_autocmd('ColorScheme', {
   group = vim.api.nvim_create_augroup('snakenvim_theme_track', { clear = true }),
   callback = function()
     pcall(function() require('lualine').refresh() end)
+    -- 兜底:任何途径触发的换配色(包括手敲 :colorscheme)都重新压黑一次。
+    -- 这是必需的 —— 主题自己的 ColorScheme 处理器会把背景色写回去。
+    M.apply_pure_black()
   end,
 })
 

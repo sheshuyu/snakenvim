@@ -34,6 +34,14 @@ return {
           -- 分隔符全部留空:不依赖任何特殊字形
           component_separators = { left = '', right = '' },
           section_separators = { left = '', right = '' },
+          -- ⚠️ 必须显式关掉图标,否则本文件开头那句「状态栏不使用任何图标字母」
+          -- 是假的。默认情况下这几个组件会画 Nerd Font 私有区字形:
+          --   filetype  → 走 devicons,py 是 U+E606、md 是 U+F48A
+          --   branch    → 分支符号
+          --   diff      → 增删符号
+          -- 实测:开着的时候光打开一个 .md 文件,渲染里就能扫出 2 个私有区码点。
+          -- 关掉之后分组名、语言名仍以文字显示(见下面 diagnostics 的 E/W/I/H)。
+          icons_enabled = false,
           disabled_filetypes = {
             -- yazi 是独立 TUI 窗口(filetype 就叫 yazi),底下再压一条状态栏
             -- 只是浪费一行;checkhealth / lazy 也是同理。

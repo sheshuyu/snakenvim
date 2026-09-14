@@ -3,7 +3,7 @@
 一套精简、可跨平台同步的 Neovim 配置。Windows 和 macOS 共用同一份仓库,
 Win11 上用 Windows Terminal、macOS 上也可能被 iPad 通过 mosh 远程使用。
 
-28 个插件(对比 LazyVim 的 60+),没有成品发行版那层 abstraction,
+29 个插件(对比 LazyVim 的 60+),没有成品发行版那层 abstraction,
 每个文件都能直接读懂、直接改。
 
 ---
@@ -81,7 +81,7 @@ leader 键是**空格**。记不住键位时直接按 `<Space>`,which-key 会弹
 | `<Space>bd` / `<Space>bo` | 关闭当前 / 其它缓冲区 |
 | `<Space>cd` | 显示当前行的诊断 |
 | `[d` / `]d` | 上/下一个诊断 |
-| `<Space>tt` | **浮动终端**开关(终端里 `<C-q>` 一步收起;或 `<Esc><Esc>` 回普通模式再按 `q`) |
+| `<C-\>` | **浮动终端**开关(高频操作所以给单键;终端里 `<C-q>` 一步收起) |
 | `<Space>e` | **文件管理**:打开 yazi(起在当前文件所在目录) |
 | `<Space>fn` | 新建文件 |
 | `<Space>sn` | **编辑 nvim 配置** |
@@ -112,16 +112,22 @@ leader 键是**空格**。记不住键位时直接按 `<Space>`,which-key 会弹
 #### 浮动终端
 
 自己实现的(见 `lua/config/terminal.lua`),不装插件。取窗口的 80%×60% 居中,
-圆角边框。**收起时只是隐藏窗口、不杀进程** —— 下次 `<Space>tt` 打开还是同一个
+圆角边框。**收起时只是隐藏窗口、不杀进程** —— 下次 `<C-\>` 打开还是同一个
 会话,里面跑的东西都还在。
 
-收起浮窗有三条路:终端里直接按 **`<C-q>`**(一步最快)、`<Esc><Esc>` 回普通模式
-再按 `q`(和 help / quickfix 窗口的习惯一致)、或再按一次 `<Space>tt`。
-选 `<C-q>` 是因为它原本是终端的 XON 流控,日常用不到;而 `<Space>tt` **不能**
-在终端里用 —— 空格是 shell 里最普通的字符,一旦成了映射前缀,每打一个空格都要
-等 400ms 才送进 shell。
+> **为什么是 `<C-\>` 而不是 `<Space>tt`**:开终端是高频操作,三个键太啰嗦。
+> 但**不能改成 `<Space>t`** —— 那会让它变成映射前缀,每次按 `<Space>t` 都要等
+> timeoutlen(400ms)才能确定你是要开终端、还是要按 `<Space>tT`,和上面
+> flash / surround 抢 `s` 是同一类问题。
+> `<C-\>` 不占任何字母、不当前缀、各键盘布局位置一致。它只绑在**普通模式**;
+> 终端模式里 `<C-\><C-n>` 是 vim 内建的「回到普通模式」,那一串不能被抢走。
 
-**终端开在当前文件所在目录**,所以打开 `main.c` 后按 `<Space>tt` 就能直接:
+收起浮窗有三条路:终端里直接按 **`<C-q>`**(一步最快)、`<Esc><Esc>` 回普通模式
+再按 `q`(和 help / quickfix 窗口的习惯一致)、或再按一次 `<C-\>`。
+选 `<C-q>` 是因为它原本是终端的 XON 流控,日常用不到。
+于是开和收正好配成一对:**`<C-\>` 开(普通模式),`<C-q>` 收(终端模式)**。
+
+**终端开在当前文件所在目录**,所以打开 `main.c` 后按 `<C-\>` 就能直接:
 
 ```bash
 gcc main.c -o main && ./main
@@ -222,6 +228,14 @@ gcc main.c -o main && ./main
 - **彩虹缩进线**(indent-blankline)—— 每层缩进不同颜色,色板取自 One Dark
 - **彩虹括号**(rainbow-delimiters)—— 嵌套的括号/引号按层级变色
 - **代码上下文头**(treesitter-context)—— 顶部吸附显示当前所在的函数/类签名
+- **markdown 渲染**(render-markdown)—— 标题加粗、表格对齐、代码块加底色、
+  `- [ ]` 变复选框。**在缓冲区里直接画**,不弹浏览器/不依赖外部程序,
+  所以在 iPad 的 ssh 里照常工作
+
+> **状态栏与 markdown 渲染里的图标都是特意关掉的。** lualine 的 filetype /
+> branch / diff 组件默认会画 Nerd Font 私有区字形(py 是 U+E606、md 是 U+F48A),
+> markdown 渲染的标题/复选框/代码块图标同样是私有区。没有 Nerd Font 的终端上
+> 这些全是豆腐块,所以统一关掉、改用文字和通用符号 —— 和下面的缩进线是同一套原则。
 - **浮动通知**(mini.notify)—— 所有提示变成右上角浮窗。**这改变了全部消息的
   显示方式**:以前多行消息会顶出「Press ENTER or type command to continue」,
   现在浮窗放得下,不再打断你;`:Snakenvim` 的整份状态摘要也能完整显示
@@ -367,6 +381,93 @@ LSP 安装清单、解析器清单、格式化器清单、缩进规则四件事�
 **不需要**再去改 `config/lsp.lua` 或 `plugins/coding.lua`。
 
 只想高亮不要 LSP 也行,把 `lsp` 字段省掉即可(文件里已有汇编的例子)。
+
+---
+
+## 自己加插件 / 改配置
+
+### 插件文件放哪
+
+`lua/plugins/` 下**一个文件一个主题域**,不是按插件数量分:
+
+| 文件 | 管什么 |
+|---|---|
+| `coding.lua` | 补全 / LSP / 格式化(清单全部从 `config/langs.lua` 推导) |
+| `editor.lua` | 语法高亮与编辑增强(treesitter、彩虹括号、markdown 渲染、mini.nvim) |
+| `ui.lua` | 纯视觉(状态栏、彩虹缩进线、键位提示) |
+| `explorer.lua` | 文件管理(yazi) |
+| `find.lua` / `flash.lua` / `git.lua` / `dashboard.lua` / `colorschemes.lua` | 各管一摊 |
+
+加之前先想清楚**它属于哪个域**,放进对应文件;确实都不属于,再新开一个。
+每个文件顶部都要写清「**为什么选它 / 有什么坑**」—— 这是这份配置最重要的约定,
+比代码本身值钱。
+
+### 最小模板
+
+```lua
+{
+  '作者/仓库名',
+  event = 'VeryLazy',          -- 何时加载,见下
+  keys = {
+    { '<leader>xx', '<cmd>某命令<CR>', desc = '一句话说明' },
+  },
+  opts = { ... },              -- 传给插件的 setup() 参数
+},
+```
+
+### 懒加载怎么选(这是最容易踩坑的地方)
+
+| 写法 | 什么时候加载 | 适合 |
+|---|---|---|
+| `lazy = false` | 启动时 | 主题、treesitter 这类必须早的 |
+| `event = 'VeryLazy'` | 启动稍后 | 大多数插件(状态栏、键位提示) |
+| `event = { 'BufReadPre', 'BufNewFile' }` | 打开文件时 | 缩进线、语法相关 |
+| `ft = { 'markdown' }` | 进入该文件类型时 | 语言专属插件 |
+| `cmd = '某命令'` | 敲到该命令时 | 偶尔用的工具 |
+
+> ⚠️ **别用 `cmd` 懒加载需要「启动后立刻生效」的插件。** 踩过的例子:
+> yazi.nvim 要接管 `nvim <目录>`,靠的是 `setup()` 里注册的 autocmd ——
+> 用 `cmd` 的话那个目录永远等不到它。详见 `plugins/explorer.lua` 顶部。
+
+### 键位写在哪
+
+**插件专属键位写在插件自己的 `keys` 字段里**,不要放 `config/keymaps.lua` ——
+那个文件只放与插件无关的通用键位。这是明文约定。
+
+加键位前先想两件事:
+1. **会不会抢拼音前缀?** 比如把两个功能都绑到 `<Space>e`,按第二次就退不回去。
+2. **会不会变成前缀导致延迟?** 一旦某个键成了别的映射的前缀,单独按它就得等
+   `timeoutlen`(400ms)。这就是 `s`(flash vs surround)、`<Space>t`
+   (终端 vs 重开)都被特意避开的原因。
+
+### 改完怎么验证
+
+```bash
+# 1. 启动有没有报错(最重要,一条命令)
+nvim --headless -c 'lua vim.defer_fn(function() vim.cmd("qa!") end, 8000)'
+
+# 2. 插件状态、有没有缺依赖
+#    在 nvim 里::Lazy   /   :checkhealth snakenvim
+```
+
+新插件装好后记得把 `lazy-lock.json` 一起提交,两台机器的版本才会一致。
+
+### ⛔ 装插件前:github.com 需要代理
+
+这台 Mac 上 **github.com 的 HTTPS 是被挡的**(实测 443 超时),而
+`api.github.com` / `raw.githubusercontent.com` 通。所以 lazy 装插件、以及
+`git fetch/push` 都得走本地代理(Clash Verge 的 mixed 端口是 **7897**):
+
+```bash
+# lazy 装/更新插件(给 nvim 进程带上代理环境变量)
+https_proxy=http://127.0.0.1:7897 http_proxy=http://127.0.0.1:7897 nvim
+
+# git 操作
+git -c http.proxy=http://127.0.0.1:7897 fetch
+```
+
+前提是 **Clash Verge 得先开着**(它默认不开机自启,`enable_auto_launch: false`)。
+确认端口在监听:`nc -z 127.0.0.1 7897 && echo ok`
 
 ---
 
