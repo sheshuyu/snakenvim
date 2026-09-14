@@ -116,8 +116,21 @@ return {
       -- 更强的文本对象:af/if 函数、ac/ic 类、aq/iq 引号等
       require('mini.ai').setup({ n_lines = 500 })
 
-      -- 增删改包围符号:sa 加、sd 删、sr 替换
-      require('mini.surround').setup()
+      -- 增删改包围符号,前缀用 gs:gsa 加、gsd 删、gsr 替换。
+      -- mini.surround 默认前缀是 s,但 s 被 flash 占了(见 plugins/flash.lua)。
+      -- 两者共存的话,按 s 之后 vim 要等 timeoutlen 才能分辨你是要 flash 还是
+      -- surround,每次都会卡一下。改成 gs 前缀两者就不打架了(LazyVim 同样处理)。
+      require('mini.surround').setup({
+        mappings = {
+          add = 'gsa',
+          delete = 'gsd',
+          find = 'gsf',
+          find_left = 'gsF',
+          highlight = 'gsh',
+          replace = 'gsr',
+          update_n_lines = 'gsn',
+        },
+      })
 
       -- 括号引号自动配对
       require('mini.pairs').setup()
