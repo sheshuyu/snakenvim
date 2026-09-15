@@ -1,7 +1,7 @@
 # snakenvim
 
 一套精简、可跨平台同步的 Neovim 配置。Windows 和 macOS 共用同一份仓库,
-Win11 上用 Windows Terminal、macOS 上也可能被 iPad 通过 mosh 远程使用。
+Win11 上用 Windows Terminal、macOS 上也可能被 iPad 通过 SSH 远程使用。
 
 30 个插件(对比 LazyVim 的 60+),没有成品发行版那层 abstraction,
 每个文件都能直接读懂、直接改。
@@ -362,7 +362,7 @@ local ADAPTIVE = true      -- 关掉就固定块体、不垂直居中
 精确复制),所以它只用原始尺寸。
 
 字符用的是 `█ ═ ║` 这类通用符号而不是 Nerd Font 私有码点:
-任何等宽字体都有这些字形,iPad 上走 mosh 也不会变成豆腐块。
+任何等宽字体都有这些字形,iPad 上走 SSH 也不会变成豆腐块。
 
 ---
 
@@ -556,12 +556,15 @@ git remote set-url origin git@github.com:sheshuyu/snakenvim.git
 
 ---
 
-## 通过 mosh 从 iPad 使用
+## 通过 SSH 从 iPad 使用
 
-配置会自动检测 mosh / ssh 会话,并**只改变一件事**:
+配置会自动检测 SSH / mosh 会话,并**只改变一件事**:
 
-**剪贴板改走 OSC52。** 因为通过 SSH / mosh 操作 mac 上的 nvim 时,`y` 会把内容送进
-**mac 的剪贴板**,而你眼前是 iPad —— 粘贴时什么都得不到。走 OSC52 则顺 mosh
+> 实际走的是 **SSH**(iPad 的 RootShell 就是 SSH)。`profile.lua` 里 mosh 的检测
+> 还留着,是备用的 —— 哪天换回 mosh 不用重写,但当前这条分支走不到。
+
+**剪贴板改走 OSC52。** 因为通过 SSH 操作 mac 上的 nvim 时,`y` 会把内容送进
+**mac 的剪贴板**,而你眼前是 iPad —— 粘贴时什么都得不到。走 OSC52 则顺 SSH
 通道把内容回传给 iPad 终端。
 
 界面不做任何缩水:图标、主题、状态栏都和电脑上一致。

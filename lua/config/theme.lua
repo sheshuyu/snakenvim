@@ -299,6 +299,19 @@ vim.api.nvim_create_autocmd('ColorScheme', {
 -- 只认列表内的主题就能让这些临时配色被忽略。
 -- 代价:手动 `:colorscheme habamax` 这类列表外的主题不会被记住 ——
 -- 相比「选择被莫名重置」,这个代价划算得多。
+--
+-- 【为什么不需要「按回车才算保存」的确认逻辑】
+-- <Space>ut 带实时预览,滚动时就会真的 :colorscheme 过去,所以看起来「只是浏览一下」
+-- 也会污染记录。但**不会** —— telescope 的 colorscheme picker 自己会在取消时还原:
+-- 它在 builtin/__internal.lua 里包了一层 close_windows,按回车才把 need_restore 置
+-- false,没按回车就把进入选择器之前的配色 :colorscheme 回来(pickers.lua 里是按实例
+-- 调用 picker.close_windows,所以那层包装真的会走到,不是死代码)。
+-- 已实测确认:滚到别的主题再按 Esc,配色会退回原来那套。
+-- 所以语义本来就是「回车 = 记下,Esc = 不记」,这里不必再自己存一份 before。
+-- 曾被误诊成「预览即记录」并打算加确认步骤 —— 那是多余的,别这么改。
+--
+-- 唯一绕得过还原的是**开着选择器直接退出 nvim**:还原没机会跑,VimLeavePre 读到的
+-- 就是预览中那套。代价很小,不值得为它引入一套确认状态机。
 vim.api.nvim_create_autocmd('VimLeavePre', {
   group = vim.api.nvim_create_augroup('snakenvim_theme_persist', { clear = true }),
   callback = function()

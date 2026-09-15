@@ -3,10 +3,11 @@
 -- 不装插件:浮动窗口 + 一个常驻的终端缓冲区,几十行就够,
 -- 而且行为完全可控(插件多数是包一层 GUI,反而不好调)。
 --
--- 用法:<Space>tt 开关。收起浮窗有三条路:
+-- 用法:<C-\> 开关(为什么不是 <Space>tt,见 config/keymaps.lua)。
+-- 收起浮窗有三条路:
 --   * 终端里直接按 <C-q>            —— 一步,最快
 --   * <Esc><Esc> 回普通模式再按 q    —— 和 help / quickfix 窗口的习惯一致
---   * 再按一次 <Space>tt
+--   * 再按一次 <C-\>
 -- 收起来不会杀掉进程,下次打开还是原来的会话。
 
 local M = {}
@@ -18,7 +19,7 @@ local function is_open()
 end
 
 --- 当前文件所在目录;没名字的缓冲区(比如刚启动)退回 nvim 自己的 cwd。
--- 终端就开在这里,这样打开 .c 文件后按 <Space>tt 就能直接
+-- 终端就开在这里,这样打开 .c 文件后按 <C-\> 就能直接
 -- gcc xxx.c -o xxx && ./xxx,不用先 cd。
 local function target_dir()
   local name = vim.api.nvim_buf_get_name(0)
