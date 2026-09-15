@@ -19,6 +19,12 @@ opt.cursorline = true
 opt.showmode = false -- 模式已经在状态栏里了,不必再占一行
 opt.laststatus = 3 -- 全局状态栏,分屏时只有一个
 opt.ruler = false
+-- 关掉「正在输入的按键」回显 —— 就是右下角闪一下你刚按的那个键。
+-- 最容易看见它的是插入模式的 jk / jj 映射(见 config/keymaps.lua):按下 j 之后
+-- nvim 要等 timeoutlen(400ms)才能确定你是不是要打 jk,这段等待期间就把那个 j
+-- 回显出来。和上面的 showmode / ruler 是同一类零碎提示,一起去掉。
+-- 注意这**不影响映射本身** —— jk / jj 照旧能退出插入模式,只是不再回显中间态。
+opt.showcmd = false
 opt.termguicolors = profile.termguicolors
 opt.fillchars = { eob = ' ' } -- 文件末尾不再是一列 ~
 opt.list = true
