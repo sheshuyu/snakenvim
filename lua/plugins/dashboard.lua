@@ -365,7 +365,9 @@ local function build_layout()
   -- 而不是让它被 alpha 挤出屏幕(它的 v_center 只把偏移量夹到 0)
   local header_h = #header
   local buttons_h = #ENTRIES * (1 + spacing)
-  local want_footer = header_h + 3 + buttons_h + 5
+  -- 末尾的 +4 是页脚块自身的高度:padding 1 + 分隔线 1 + padding 1 + 文字 1。
+  -- (文字原本两行,删掉 "snakenvim" 那行后由 5 改成 4,和实际高度保持一致)
+  local want_footer = header_h + 3 + buttons_h + 4
 
   if win_h >= want_footer then
     -- 分隔线宽度跟菜单一致,把页脚和菜单绑成一个整体。
@@ -380,7 +382,10 @@ local function build_layout()
     content[#content + 1] = { type = 'padding', val = 1 }
     content[#content + 1] = {
       type = 'text',
-      val = { "snakenvim", '按 <Space> 查看所有键位' },
+      -- 只剩这一行。原来上面还有一行 "snakenvim",删掉了 —— 上方已是几十列的
+      -- SNAKENVIM 立体字样,页脚再重复一遍品牌名纯属碍眼。
+      -- 想加回来往 val 里再塞一个字符串即可。
+      val = { '按 <Space> 查看所有键位' },
       opts = { position = 'center', hl = 'SnakeDashboardFooter' },
     }
   end
