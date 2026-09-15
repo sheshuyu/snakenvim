@@ -8,7 +8,6 @@
 -- 插件专属键位写在各自的 plugins/ 文件里,这里只放与插件无关的通用键位。
 
 local map = vim.keymap.set
-local profile = require('config.profile')
 
 -- ── 插入模式快速退出 ────────────────────────────────────────────────────
 -- 手不离开主键区就能回普通模式。代价是插入模式下打不出 "jk" / "jj" 这两个
@@ -84,31 +83,12 @@ map('x', '<leader>p', '"_dP', { desc = '粘贴(不覆盖寄存器)' })
 map({ 'n', 'v' }, '<leader>y', '"+y', { desc = '复制到系统剪贴板' })
 map('n', '<leader>Y', '"+Y', { desc = '复制整行到系统剪贴板' })
 
--- 通过 SSH 连到 mac 时,y 默认走 OSC52 回到 iPad。
--- 如果 RootShell 不支持 OSC52,用这个键位直接送进 mac 本机的剪贴板。
-if profile.remote and profile.is_mac then
-  local function pbcopy(text)
-    if text == nil or text == '' then
-      vim.notify("snakenvim:没有内容可复制", vim.log.levels.WARN)
-      return
-    end
-    vim.fn.system({ 'pbcopy' }, text)
-    if vim.v.shell_error == 0 then
-      vim.notify(("snakenvim:已复制到被连的 mac 剪贴板(%d 字节)"):format(#text))
-    else
-      vim.notify("snakenvim:pbcopy 调用失败", vim.log.levels.ERROR)
-    end
-  end
-
-  map('n', '<leader>yc', function()
-    pbcopy(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n'))
-  end, { desc = '复制整个文件到 mac 剪贴板' })
-
-  map('v', '<leader>yc', function()
-    vim.cmd('normal! "zy')
-    pbcopy(vim.fn.getreg('z'))
-  end, { desc = '复制选中内容到 mac 剪贴板' })
-end
+-- 这里原来还有一对 <leader>yc(直接调 mac 的 pbcopy),作为 OSC52 失效时的兜底。
+-- 已删掉,因为**它的存在本身就是两台机器键位表不一致的来源** —— 它只在
+-- 「远程 + mac」时注册,于是 mac 被 iPad 远程用时 which-key 会多列一项,Windows 上没有。
+-- 远程时的剪贴板现在统一只走 OSC52(见 config/profile.lua 与 options.lua)。
+-- 想加回来就在下面补一段 `if profile.remote and profile.is_mac then` 的映射
+-- (需要同时把文件顶部的 `local profile = require('config.profile')` 加回来)。
 
 -- ── 界面(主题 / 图标 / 远程优化)──────────────────────────────────────
 map('n', '<leader>ut', function()
