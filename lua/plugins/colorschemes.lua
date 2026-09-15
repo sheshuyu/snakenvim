@@ -66,6 +66,14 @@ return {
           surface2 = '#33363b',
           subtext1 = '#c2c5cd',
           subtext0 = '#a8abb3',
+          -- overlay0 是**漏补的一个**,不是可有可无的:
+          -- 它在 catppuccin 里被 20 个集成文件用到 —— NonText、FoldColumn、
+          -- PmenuThumb、TabLine、LspCodeLens、FlashBackdrop、以及 barbar 的
+          -- BufferInactive 等等。不补的话这些地方会露出 catppuccin 原版的
+          -- #6c7086(冷紫灰),在一片中性灰里是唯一一块偏蓝的,很显眼。
+          -- 取法:catppuccin 原梯度里 overlay0 落在 overlay1 和 surface2 之间,
+          -- 这里按同样位置在 Trae 的 #737780 和 #33363b 之间取 30% 处。
+          overlay0 = '#60646b',
         },
       },
       -- 下面不是调色板问题,是「槽位对应」的校准:catppuccin 把这几类语法元素

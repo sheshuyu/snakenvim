@@ -35,11 +35,16 @@ map('n', '<leader>wo', '<C-w>o', { desc = '只保留当前窗口' })
 map('n', '<leader>wd', '<C-w>d', { desc = '窗口:显示光标下的诊断' })
 
 -- ── 缓冲区 ──────────────────────────────────────────────────────────────
-map('n', '<S-h>', '<cmd>bprevious<CR>', { desc = '缓冲区:上一个' })
-map('n', '<S-l>', '<cmd>bnext<CR>', { desc = '缓冲区:下一个' })
+-- 大部分缓冲区键位现在归顶栏(barbar)了,按本仓库的约定写在 plugins/ui.lua
+-- 的 keys 字段里,不在这里。移过去的有:
+--   <S-h> / <S-l>        上一个 / 下一个(**按顶栏的视觉顺序**走)
+--   <leader>bd           关闭当前(用 BufferClose,不会打乱窗口布局)
+--   <leader>bo           关闭其它所有
+--   <leader>bp           按字母跳转 buffer(新增的)
+--
+-- 留在下面这个,因为它和插件无关 —— `e #` 是 vim 内建的「切回上一个缓冲区」,
+-- 语义和顶栏的 BufferPrevious 不一样(它跳的是 alternate file,不是相邻标签)。
 map('n', '<leader>bb', '<cmd>e #<CR>', { desc = '切换回上一个缓冲区' })
-map('n', '<leader>bd', '<cmd>bdelete<CR>', { desc = '关闭当前缓冲区' })
-map('n', '<leader>bo', '<cmd>%bdelete<CR>', { desc = '关闭其它所有缓冲区' })
 
 -- ── 文件 ────────────────────────────────────────────────────────────────
 map('n', '<C-s>', '<cmd>write<CR>', { desc = '保存' })
