@@ -523,6 +523,37 @@ git -c http.proxy=http://127.0.0.1:7897 fetch
 前提是 **Clash Verge 得先开着**(它默认不开机自启,`enable_auto_launch: false`)。
 确认端口在监听:`nc -z 127.0.0.1 7897 && echo ok`
 
+> 代理只影响 **HTTPS**。推送走 SSH 的话不经过它,见下。
+
+### 推送:走 SSH,不走钥匙串
+
+这台 Mac 上 `git push` **不能用 HTTPS** —— 不是网络不通,是拿不到凭据。
+
+macOS 的登录钥匙串只在 **Aqua 图形会话**里自动解锁,而这台机器日常是
+**被 SSH 远程使用**的(iPad RootShell → mac):sshd 拉起的是 `Background`
+安全会话,看不到已解锁的钥匙串。于是 `git-credential-osxkeychain` 报
+`failed to get: -25308`(`errSecInteractionNotAllowed`),git 退回去问用户名,
+而命令行没有 TTY 就直接失败。`gh` 一样失效 —— 它把 token 也存在钥匙串里。
+
+一次性的解法,让 git 彻底绕开钥匙串:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N '' -C 'mac snakenvim'
+# 把 ~/.ssh/id_ed25519.pub 的内容加到 https://github.com/settings/ssh/new
+git remote set-url origin git@github.com:sheshuyu/snakenvim.git
+```
+
+`~/.ssh/config` 里再把 `github.com` 重定向到 `ssh.github.com:443`,因为
+**github.com 的 22 和 443 在这台机器上都被拦**,只有 `ssh.github.com:443` 通。
+重定向之后 `git@github.com:...` 这种标准 URL 原样可用,不必写成怪端口形式。
+
+> 密钥**故意不设口令**:设了口令就需要 `ssh-agent`,而 macOS 的 agent 又是挂在
+> 钥匙串上的 —— 等于绕回原来那个问题。代价是**谁能读到这个私钥文件,谁就能推送**。
+
+> `~/.ssh/` 不跟 git 走,所以 **Windows 那边不受影响**,仍然走 HTTPS;
+> 换 SSH 只是这台被远程使用的 Mac 的本地处置。clone(公开仓库的读操作)
+> 也照旧走 HTTPS 即可,只有推送需要上面这套。
+
 ---
 
 ## 通过 mosh 从 iPad 使用
