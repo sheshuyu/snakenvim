@@ -177,7 +177,7 @@ function M.check()
     h.info(('远程会话:是%s'):format(s.mosh and '(mosh)' or '(ssh)'))
     if s.clipboard == 'osc52' then
       h.info('剪贴板走 OSC52 —— y 的结果会回到你眼前的终端')
-      h.info('若 iPad RootShell 不支持 OSC52,远程下就没有剪贴板通道了')
+      h.info('若 iPad RootShell 不支持 OSC52,用 <Space>yc 改为送进 mac 本机剪贴板')
     end
   else
     h.info('远程会话:否,剪贴板使用系统原生方式')

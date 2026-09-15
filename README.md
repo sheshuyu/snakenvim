@@ -600,13 +600,7 @@ git remote set-url origin git@github.com:sheshuyu/snakenvim.git
 
 ### 如果 OSC52 不被 RootShell 支持
 
-那就没有剪贴板通道了 —— 远程时统一只走 OSC52。
-
-> 这里原来有一个 `<Space>yc` 兜底(直接调 mac 的 `pbcopy`)。删掉的原因是它**只在
-> 「远程 + mac」时注册**,于是 which-key 里只有 mac 会多出一项,两台机器的键位表
-> 对不上。想加回来就在 `keymaps.lua` 里补一段
-> `if profile.remote and profile.is_mac then` 的映射,函数体是
-> `vim.fn.system({ 'pbcopy' }, text)`。
+用 `<Space>yc` 直接把内容送进 mac 本机的剪贴板(`pbcopy`)。
 
 ### 手动模拟
 
