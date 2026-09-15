@@ -235,8 +235,18 @@ gcc main.c -o main && ./main
 | `E 1` / `W 2` | 这个文件有 1 个错误 / 2 个警告 —— 不用逐个点进去找 |
 | `×` | 关闭按钮(U+00D7)。鼠标点得动 |
 
-**只有 1 个 buffer 时顶栏自动隐藏**,所以直接敲 `nvim` 看到的启动界面是干净的,
-不会顶上多挂一条空栏。
+**顶栏常驻**:只要开着文件就一直在,哪怕只开了一个。做法是把 barbar 的
+`auto_hide` 设成 `false` —— 它的 `setup()` 会把 `showtabline` 设成 2 且之后不再改动。
+(原来设的是 `1`,含义是「可见 buffer 数 ≤ 1 就整行隐藏」,结果单文件编辑时顶栏
+完全看不见,很容易被当成没实现。)
+
+> 唯一的例外是**启动界面**:顶上不会挂一条空栏。
+> 这条必须单独处理,而且顺序有讲究 —— `showtabline` 是全局选项,`alpha` 又不在
+> barbar 的 buffer 列表里(`exclude_ft` 里有它),常驻后会画出一条空行。
+> 更麻烦的是 `alpha` 是 `lazy = false`(**启动时**就加载),比 `VeryLazy` 的 barbar
+> 更早,所以关顶栏只能写在 `barbar.setup()` **之后**,否则又被设回 `2`。
+> 这也是它没有照抄 `dashboard.lua` 里那对 `laststatus` autocmd 的原因 ——
+> `laststatus` 只有 `options.lua` 写一次,没有第二个写入者。
 
 > **为什么不用更有名的 bufferline.nvim**:它的星更多(4368 vs 2728),但有两条硬伤
 > —— (1) **catppuccin 没有它的集成**(69 个集成文件里只有 barbar 的,`grep BufferLine`

@@ -106,11 +106,21 @@ return {
   --   分隔符 ▎ U+258E 左四分之一块  修改 ● U+25CF 实心圆  关闭 × U+00D7 乘号
   -- barbar **默认的关闭按钮是 Nerd Font 私有区字形**,必须改掉。
   --
-  -- 【auto_hide = 1 顺便解决了启动界面】
-  -- 不带文件启动时只有 alpha 一个 buffer,所以顶栏不会挂在首页上。
-  -- 这省掉了一对 `FileType alpha` / `BufEnter` 的 showtabline autocmd
-  -- (showtabline 和 laststatus 一样是**全局**选项,alpha 自己管不了 ——
-  --  dashboard.lua 里为 laststatus 写的那对 autocmd 就是同样的道理)。
+  -- 【auto_hide = false:顶栏常驻】
+  -- 原来设的是 1,含义是「可见 buffer 数 ≤ 1 就整行隐藏」(上游 render.lua 里是
+  -- `#buffers <= auto_hide` → `showtabline = 0`)。代价是**只开一个文件时顶栏完全
+  -- 看不见** —— 而那恰恰是最常见的用法,于是很容易被当成「顶栏没实现」。
+  -- barbar 的 setup() 会把 showtabline 设成 2 且此后不再改动(上游 barbar.lua 末尾),
+  -- 所以设成 false 就等于常驻,不需要我们自己碰 showtabline。
+  --
+  -- 【代价与补救:启动界面那条空栏】
+  -- showtabline 是**全局**选项,而 alpha 不在 barbar 的 buffer 列表里(exclude_ft
+  -- 里有它),所以常驻之后首页顶上会多一条画不出东西的空栏。
+  -- 补救写在下面的 config 里,而且是 setup **之后** —— 顺序不能反:
+  -- alpha 是 lazy = false、**启动时**就加载的,它的 FileType alpha 早在 barbar
+  -- (VeryLazy)之前就烧完了;那时即使设了 showtabline = 0,随后 barbar.setup()
+  -- 也会把它设回 2。所以不能照抄 dashboard.lua 那对 laststatus autocmd 的做法 ——
+  -- laststatus 只有 options.lua 在启动时写一次,没有第二个写入者,才没这个问题。
   {
     'romgrk/barbar.nvim',
     event = 'VeryLazy',
@@ -148,8 +158,8 @@ return {
     opts = {
       -- 动画在 SSH / iPad 上是纯开销,默认却是 true
       animation = false,
-      -- 只有 1 个 buffer 时不显示 —— 启动界面因此自动是干净的,不用额外写 autocmd
-      auto_hide = 1,
+      -- 常驻 —— 只开一个文件时也显示。首页那条空栏由下面的 config 单独处理。
+      auto_hide = false,
       -- 右上角的 tabpage 计数。单窗口工作流用不上,而且它默认的分隔字形
       -- (BufferTabpagesSep)也不是通用字符
       tabpages = false,
@@ -185,6 +195,29 @@ return {
         },
       },
     },
+
+    -- 接手 showtabline:首页(alpha)关掉顶栏,其余情况常驻。
+    --
+    -- 必须写在这里、而不是照抄 dashboard.lua 的 FileType autocmd,原因见上面
+    -- 「代价与补救」那段:alpha 启动时就加载完了,那时设 0 会被随后的 setup() 设回 2。
+    -- 这个 config 跑在默认的 require('barbar').setup() **之后**,所以纠正一定生效。
+    config = function(_, opts)
+      require('barbar').setup(opts)
+
+      local function sync_tabline()
+        vim.o.showtabline = vim.bo.filetype == 'alpha' and 0 or 2
+      end
+
+      -- 管住后续切换:从首页打开文件、或又退回首页
+      vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+        group = vim.api.nvim_create_augroup('snakenvim_tabline', { clear = true }),
+        callback = sync_tabline,
+      })
+
+      -- 立即按当前缓冲区求值一次。启动时这一步就是「把首页那条空栏关掉」——
+      -- 此刻正停在 alpha 的 dashboard buffer 上。
+      sync_tabline()
+    end,
   },
 
   -- ── indent-blankline:彩虹缩进线 ───────────────────────────────────────
